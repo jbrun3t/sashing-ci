@@ -1,0 +1,5 @@
+# Applied to every tuxmake run; the presets are the other files here (tuxmake @PRESET).
+--wrapper=ccache
+--fail-fast
+# A randomized struct layout gets a new seed in every build directory, missing ccache.
+--kconfig-add=CONFIG_RANDSTRUCT_NONE=y

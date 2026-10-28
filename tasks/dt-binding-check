@@ -1,0 +1,46 @@
+#!/bin/bash -e
+# Usage: dt-binding-check FILE
+#
+# Check the binding schema FILE, a path in the tree in the current directory, with the
+# kernel's dt_binding_check, at HEAD and at HEAD~1. Exits 1 when HEAD has findings that
+# HEAD~1 had not: the commit added them. Exits 2 when it could not check HEAD, such as
+# with a dtschema older than the tree requires.
+
+file=${1:?usage: dt-binding-check FILE}
+out=../dtcheck
+log=$(mktemp)
+head=$(git rev-parse HEAD)
+trap 'rm -f "$log"; git checkout -q --detach "$head"' EXIT
+rm -rf "$out"
+
+# FILE's findings at the current checkout, one per line. make ignores the checkers'
+# findings, but fails when it cannot check. A finding's line and column change with the
+# lines a commit adds above it: they are left out of the comparison.
+findings() {
+	make -s O="$out" dt_binding_check DT_SCHEMA_FILES="$file" >"$log" 2>&1 || return
+	# A finding goes on over the tab-indented lines after it.
+	awk '/^\t/ { f = f " " $0; next } f != "" { print f } { f = $0 } END { if (f != "") print f }' "$log" |
+		sed -E 's/:[0-9][0-9.:-]*:/:/g' | sort -u
+}
+
+if ! now=$(findings); then
+	cat "$log"
+	exit 2
+fi
+if [ -z "$now" ]; then
+	echo "Findings: none"
+	exit 0
+fi
+# When HEAD~1 cannot be checked, all of HEAD's findings count as added.
+before=
+if git cat-file -e "HEAD~1:$file" 2>/dev/null; then
+	git checkout -q --detach HEAD~1
+	before=$(findings) || true
+fi
+
+echo "Findings: $now"
+added=$(comm -13 <(echo "$before") <(echo "$now") | grep . || true)
+echo "Added by the commit: ${added:-none}"
+if [ -n "$added" ]; then
+	exit 1
+fi

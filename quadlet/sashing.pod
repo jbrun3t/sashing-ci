@@ -1,0 +1,6 @@
+# The master and the workers of this machine, which reach it on localhost.
+
+[Pod]
+PodName=sashing
+# The web UI and REST API.
+PublishPort=127.0.0.1:8010:8010

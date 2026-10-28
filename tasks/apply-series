@@ -1,0 +1,40 @@
+#!/bin/bash -e
+# Usage: apply-series COMMITS MSGID
+#
+# Apply the series of the message MSGID from lore on the tree in the current directory
+# with b4, at MSGID's own revision, not the thread's latest. Write the commits of the
+# series' own patches to the file COMMITS, one per line: b4 applies the prerequisites the
+# cover letter names before them. Exits 1 when nothing was applied, 3 when prerequisites
+# were applied.
+
+commits=${1:?usage: apply-series COMMITS MSGID}
+msgid=${2:?usage: apply-series COMMITS MSGID}
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
+
+export GIT_COMMITTER_NAME=sashing-ci GIT_COMMITTER_EMAIL=sashing-ci@localhost
+base=$(git rev-parse HEAD)
+set -o pipefail
+
+# Temporary, until b4 has a flag for it: the revision is the vN of MSGID's subject prefix,
+# none being v1. Without -v, b4 takes the thread's latest.
+prefix=$(b4 mbox --single-message -o - "$msgid" | sed -n '1,/^$/ s/^Subject: *\[\([^]]*\)\].*/\1/p')
+if [[ $prefix =~ (^|[[:space:]])v([0-9]+)($|[[:space:]]) ]]; then
+	version=${BASH_REMATCH[2]}
+else
+	version=1
+fi
+echo "Revision of $msgid: v$version" >&2
+
+b4 shazam -i -v "$version" "$msgid" 2>&1 | tee "$log" >&2
+# b4 exits 0 when it finds nothing to apply, such as an unknown revision.
+if [ "$(git rev-parse HEAD)" = "$base" ]; then
+	echo 'b4 applied nothing' >&2
+	exit 1
+fi
+
+count=$(sed -n 's/^Total patches: \([0-9]*\)$/\1/p' "$log")
+git rev-list --reverse -n "${count:?}" HEAD >"$commits"
+if grep -q '^ *Deps: Applying prerequisite patch: ' "$log"; then
+	exit 3
+fi

@@ -1,0 +1,31 @@
+# The Buildbot master: the flow, the web UI and REST API, the run history, and the tests'
+# results to patchwork. See README.md.
+
+[Unit]
+Description=sashing: master
+# pw-check's socket, served on the host by pw-triage-bot: the master reports through it.
+Wants=pw-check-linux-clk.socket
+After=pw-check-linux-clk.socket
+
+[Container]
+ContainerName=sashing-master
+Pod=sashing.pod
+Image=docker.io/buildbot/buildbot-master:v4.3.0
+Secret=sashing-worker-pass,type=env,target=WORKERPASS
+Volume=%S/sashing:/buildbot
+Volume=./../master/master.cfg:/buildbot/master.cfg:ro
+Volume=./../master/reporterjson.py:/buildbot/reporterjson.py:ro
+Volume=./../samples/linux-clk.ini:/buildbot/project.ini:ro
+# The directory, not the socket: a socket made anew, by a restart of its unit, reaches
+# the master.
+Volume=%t/pw-check:/run/pw-check
+# Buildbot re-reads master.cfg on SIGHUP: systemctl reload. reporterjson.py, once imported,
+# needs a restart.
+ReloadSignal=SIGHUP
+
+[Service]
+StateDirectory=sashing
+# pw-check's socket directory, there for the mount even when its socket is not: then only
+# the reports fail. Kept when the master stops, the socket's unit sharing it.
+RuntimeDirectory=pw-check
+RuntimeDirectoryPreserve=yes

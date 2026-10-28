@@ -1,0 +1,3 @@
+--target-arch=riscv
+--toolchain=clang
+LLVM=1

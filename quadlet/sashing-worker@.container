@@ -1,0 +1,25 @@
+# A Buildbot worker, named by the instance: sashing-worker@local1. See README.md.
+
+[Unit]
+Description=sashing: worker %i
+After=sashing-master.service
+
+[Container]
+ContainerName=sashing-worker-%i
+Pod=sashing.pod
+# The pod would start the bare template, as an instance named after the pod: started by
+# instance only. Quadlet stops linking pods to templates in podman 6.
+StartWithPod=false
+Image=localhost/sashing-worker:latest
+Environment=WORKERNAME=%i BUILDMASTER=localhost
+Secret=sashing-worker-pass,type=env,target=WORKERPASS
+# The worker's home: the builders' trees and b4's cache. U: owned by the image's
+# `tuxmake` user, i.e. one of the host user's subuids.
+Volume=%C/sashing/%i:/home/tuxmake:U
+# The ccache of every worker of this machine: one worker's builds hit another's.
+Volume=%C/sashing/ccache:/home/tuxmake/.ccache:U
+
+[Service]
+CacheDirectory=sashing/%i sashing/ccache
+# The worker gives up after a few failed connections to the master.
+Restart=always

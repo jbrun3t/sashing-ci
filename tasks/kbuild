@@ -1,0 +1,22 @@
+#!/bin/bash -e
+# Usage: kbuild PRESET CONFIG [TARGET...]
+#
+# Build the kernel tree in the current directory with tuxmake: PRESET names a tuxmake
+# configuration in tuxmake/ next to this script, CONFIG the config target, TARGET the
+# make targets, everything by default. KCFLAGS comes from the environment.
+
+preset=${1:?usage: kbuild PRESET CONFIG [TARGET...]}
+config=${2:?usage: kbuild PRESET CONFIG [TARGET...]}
+shift 2
+here=$(dirname "$(realpath "$0")")
+
+# Next to the tree, at the same place for every tree: ccache then sees the same relative
+# paths whichever builder checked the tree out (see ccache.conf).
+out=../kbuild
+rm -rf "$out"
+
+# tuxmake reads @PRESET, and its default configuration, from $XDG_CONFIG_HOME/tuxmake. It
+# replaces a KCFLAGS from the environment with its own: pass it explicitly. The preset
+# goes right before the targets: its make variables are positional arguments too.
+XDG_CONFIG_HOME=$here exec tuxmake --build-dir="$out/build" --output-dir="$out/artifacts" \
+	--kconfig="$config" ${KCFLAGS:+--environment="KCFLAGS=$KCFLAGS"} "@$preset" "${@:-default}"

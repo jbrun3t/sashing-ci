@@ -1,0 +1,44 @@
+# A Buildbot worker with the kernel toolchains and the tasks, run as the image's
+# `tuxmake` user. Build from the repository's root:
+#
+#   podman build -f worker/Containerfile -t localhost/sashing-worker .
+#
+# tuxmake's clang-21 image is Debian trixie with clang 21 and the native gcc, plus
+# tuxmake and ccache: it builds every preset in tasks/tuxmake/. b4 checks signed
+# messages with gpg. checkpatch's license check needs ply and GitPython, its spelling
+# check codespell's dictionary. The kernel's binding checks need dtschema and yamllint,
+# and ruamel.yaml for their style checker. dtschema is the latest when the image is built:
+# see README.md for updating it.
+
+ARG BUILDBOT_VERSION=4.3.0
+ARG TUXMAKE_IMAGE=docker.io/tuxmake/clang-21:20261001
+ARG B4_VERSION=0.16.0
+ARG YAMLLINT_VERSION=1.38.0
+
+FROM docker.io/buildbot/buildbot-worker:v${BUILDBOT_VERSION} AS buildbot
+
+FROM ${TUXMAKE_IMAGE}
+ARG BUILDBOT_VERSION
+ARG B4_VERSION
+ARG YAMLLINT_VERSION
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3-venv gpg python3-ply python3-git python3-ruamel.yaml codespell \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir "b4==$B4_VERSION" "buildbot-worker==$BUILDBOT_VERSION" \
+        dtschema "yamllint==$YAMLLINT_VERSION"
+
+# The official worker's: configured by BUILDMASTER, BUILDMASTER_PORT, WORKERNAME and
+# WORKERPASS, which it removes from the builds' environment.
+COPY --from=buildbot /buildbot/buildbot.tac /opt/sashing/buildbot.tac
+COPY worker/ccache.conf /etc/ccache.conf
+COPY tasks/ /opt/sashing/tasks/
+
+# The venv last: python3 stays the system's, with the kernel scripts' modules.
+ENV PATH=/opt/sashing/tasks:$PATH:/opt/venv/bin
+# The worker's home persists: the builders' trees, b4's cache, and ccache's (~/.ccache).
+ENV BUILDBOT_BASEDIR=/home/tuxmake
+USER tuxmake
+WORKDIR /home/tuxmake
+CMD ["twistd", "--pidfile=", "-ny", "/opt/sashing/buildbot.tac"]
