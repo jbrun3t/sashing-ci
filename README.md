@@ -76,10 +76,8 @@ systemctl --user start sashing-pod sashing-master sashing-worker@local1 sashing-
 To take a change:
 
 - a task: rebuild the image, restart the workers
-- `master.cfg` or the project: `systemctl --user reload sashing-master`
-- `reporterjson.py`: restart the master
-- The master mounts its files one by one: an editor that replaces a file on save needs a
-  restart.
+- `master.cfg`, `reporterjson.py` or the project: `systemctl --user restart sashing-master`,
+  which ends the running builds
 
 The image keeps the dtschema it was built with. Once the tree requires a newer one, the
 binding checks fail to check: rebuild without the cache, and restart the workers, which

@@ -19,9 +19,6 @@ Volume=./../samples/linux-clk.ini:/buildbot/project.ini:ro
 # The directory, not the socket: a socket made anew, by a restart of its unit, reaches
 # the master.
 Volume=%t/pw-check:/run/pw-check
-# Buildbot re-reads master.cfg on SIGHUP: systemctl reload. reporterjson.py, once imported,
-# needs a restart.
-ReloadSignal=SIGHUP
 
 [Service]
 StateDirectory=sashing
