@@ -9,7 +9,8 @@ from lore, check each of its patches, then build the series.
 - `tasks/`: the work, scripts that know nothing of Buildbot
 - `worker/`: the worker image, `localhost/sashing-worker`: toolchains, b4 and the tasks
 - `quadlet/`: the rootless Quadlet units
-- `samples/`: projects, such as `linux-clk.ini`, mounted as the master's `project.ini`
+- `samples/`: projects, such as `linux-clk.ini`: the master reads its own from
+  `~/.config/sashing-ci/project.ini`
 
 ## Flow
 
@@ -32,11 +33,10 @@ series MSGID                 apply the series on git_base, at MSGID's revision
 
 ## Patchwork
 
-[pw-triage-bot](https://github.com/jbrun3t/pw-triage-bot), on the host, starts the runs of
+[pw-triage-bot](https://github.com/jbrun3t/pw-triage-bot) starts the runs of
 the series it triages through its hook, `trigger-ci.sh`, as the project's
 `[patchwork] owner`. Each test of those runs is reported as it ends, through pw-check's
-socket (pw-triage-bot's `samples/pw-check.socket`, installed as
-`pw-check-linux-clk.socket`):
+socket, `[patchwork] socket`, in the `pw-check` volume the master mounts:
 
 - a patch build's tests on its patch; a series build's on every patch of the series,
   context prefixed `series-`
@@ -65,13 +65,13 @@ Presets are tuxmake configuration files in `tasks/tuxmake/`; `default` applies t
 podman build -f master/Containerfile -t localhost/sashing-master .
 podman build -f worker/Containerfile -t localhost/sashing-worker .
 ln -s "$PWD" ~/.config/containers/systemd/sashing
+mkdir -p ~/.config/sashing-ci && cp samples/linux-clk.ini ~/.config/sashing-ci/project.ini
 head -c 24 /dev/urandom | base64 | podman secret create sashing-worker-pass -
 systemctl --user daemon-reload
 systemctl --user start sashing-pod sashing-master sashing-worker@local1 sashing-worker@local2
 ```
 
-- Quadlet reads the units from the checkout; the master's finds the project relative to
-  itself.
+- Quadlet reads the units from the checkout.
 - The workers are instances of one template, which the pod does not start: start each by
   name.
 
@@ -94,7 +94,8 @@ systemctl --user restart sashing-worker@local1 sashing-worker@local2
 | Host | Container | |
 |---|---|---|
 | `~/.local/state/sashing/` | master: `/buildbot` | database |
-| `$XDG_RUNTIME_DIR/pw-check/` | master: `/run/pw-check` | pw-check's socket |
+| `~/.config/sashing-ci/project.ini` | master: `/opt/sashing/project.ini` | the project |
+| volume `pw-check` | master: `/run/pw-check` | pw-check's socket |
 | `~/.cache/sashing/<worker>/` | worker: `/home/tuxmake` | builders' trees, b4's cache |
 | `~/.cache/sashing/ccache/` | workers: `/home/tuxmake/.ccache` | ccache, shared |
 

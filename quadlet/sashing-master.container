@@ -3,9 +3,6 @@
 
 [Unit]
 Description=sashing: master
-# pw-check's socket, served on the host by pw-triage-bot: the master reports through it.
-Wants=pw-check-linux-clk.socket
-After=pw-check-linux-clk.socket
 
 [Container]
 ContainerName=sashing-master
@@ -16,14 +13,10 @@ RunInit=true
 Secret=sashing-worker-pass,type=env,target=WORKERPASS
 # The state: the database.
 Volume=%S/sashing:/buildbot
-Volume=./../samples/linux-clk.ini:/opt/sashing/project.ini:ro
-# The directory, not the socket: a socket made anew, by a restart of its unit, reaches
-# the master.
-Volume=%t/pw-check:/run/pw-check
+Volume=%E/sashing-ci/project.ini:/opt/sashing/project.ini:ro
+# pw-check's socket, served by whoever reports to patchwork. Without it, only the reports
+# fail.
+Volume=pw-check:/run/pw-check
 
 [Service]
 StateDirectory=sashing
-# pw-check's socket directory, there for the mount even when its socket is not: then only
-# the reports fail. Kept when the master stops, the socket's unit sharing it.
-RuntimeDirectory=pw-check
-RuntimeDirectoryPreserve=yes
