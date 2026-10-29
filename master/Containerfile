@@ -1,0 +1,24 @@
+# The Buildbot master with the flow, master.cfg and its reporter. Build from the
+# repository's root:
+#
+#   podman build -f master/Containerfile -t localhost/sashing-master .
+#
+# The project, project.ini, is mounted next to master.cfg; the state, the database, in
+# the working directory.
+
+FROM docker.io/library/debian:trixie-slim
+ARG BUILDBOT_VERSION=4.3.0
+
+RUN apt-get update && apt-get install -y --no-install-recommends python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir \
+        "buildbot==$BUILDBOT_VERSION" "buildbot-www==$BUILDBOT_VERSION"
+
+COPY master/buildbot.tac master/master.cfg master/reporterjson.py /opt/sashing/
+
+# master.cfg imports reporterjson, next to it.
+ENV PATH=/opt/venv/bin:$PATH PYTHONPATH=/opt/sashing
+WORKDIR /buildbot
+# upgrade-master creates the database, or brings it to this Buildbot's schema.
+CMD ["sh", "-c", "cp /opt/sashing/buildbot.tac . && buildbot upgrade-master . && exec twistd --pidfile= -ny buildbot.tac"]

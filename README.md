@@ -3,8 +3,9 @@
 Kernel patch CI on [Buildbot](https://buildbot.net): given a message-id, apply the series
 from lore, check each of its patches, then build the series.
 
-- `master/master.cfg`: the flow, and what patchwork gets
-- `master/reporterjson.py`: a reporter writing JSON to a Unix socket
+- `master/`: the master image, `localhost/sashing-master`: Buildbot and
+  - `master.cfg`: the flow, and what patchwork gets
+  - `reporterjson.py`: a reporter writing JSON to a Unix socket
 - `tasks/`: the work, scripts that know nothing of Buildbot
 - `worker/`: the worker image, `localhost/sashing-worker`: toolchains, b4 and the tasks
 - `quadlet/`: the rootless Quadlet units
@@ -61,6 +62,7 @@ Presets are tuxmake configuration files in `tasks/tuxmake/`; `default` applies t
 ## Setup
 
 ```sh
+podman build -f master/Containerfile -t localhost/sashing-master .
 podman build -f worker/Containerfile -t localhost/sashing-worker .
 ln -s "$PWD" ~/.config/containers/systemd/sashing
 head -c 24 /dev/urandom | base64 | podman secret create sashing-worker-pass -
@@ -68,16 +70,17 @@ systemctl --user daemon-reload
 systemctl --user start sashing-pod sashing-master sashing-worker@local1 sashing-worker@local2
 ```
 
-- Quadlet reads the units from the checkout; they find `master.cfg` and the project
-  relative to themselves.
+- Quadlet reads the units from the checkout; the master's finds the project relative to
+  itself.
 - The workers are instances of one template, which the pod does not start: start each by
   name.
 
 To take a change:
 
-- a task: rebuild the image, restart the workers
-- `master.cfg`, `reporterjson.py` or the project: `systemctl --user restart sashing-master`,
-  which ends the running builds
+- a task: rebuild the worker image, restart the workers
+- `master.cfg` or `reporterjson.py`: rebuild the master image, restart the master
+- the project: restart the master
+- A master restart ends the running builds.
 
 The image keeps the dtschema it was built with. Once the tree requires a newer one, the
 binding checks fail to check: rebuild without the cache, and restart the workers, which

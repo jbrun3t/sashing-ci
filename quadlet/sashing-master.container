@@ -10,12 +10,13 @@ After=pw-check-linux-clk.socket
 [Container]
 ContainerName=sashing-master
 Pod=sashing.pod
-Image=docker.io/buildbot/buildbot-master:v4.3.0
+Image=localhost/sashing-master:latest
+# An init reaping the processes the master starts.
+RunInit=true
 Secret=sashing-worker-pass,type=env,target=WORKERPASS
+# The state: the database.
 Volume=%S/sashing:/buildbot
-Volume=./../master/master.cfg:/buildbot/master.cfg:ro
-Volume=./../master/reporterjson.py:/buildbot/reporterjson.py:ro
-Volume=./../samples/linux-clk.ini:/buildbot/project.ini:ro
+Volume=./../samples/linux-clk.ini:/opt/sashing/project.ini:ro
 # The directory, not the socket: a socket made anew, by a restart of its unit, reaches
 # the master.
 Volume=%t/pw-check:/run/pw-check
