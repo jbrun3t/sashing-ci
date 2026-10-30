@@ -13,10 +13,16 @@ RunInit=true
 Secret=sashing-worker-pass,type=env,target=WORKERPASS
 # The state: the database.
 Volume=%S/sashing:/buildbot
-Volume=%E/sashing-ci/project.ini:/opt/sashing/project.ini:ro
+# The flow, relative to this file: the checkout's. Directories, not files: a file mount
+# keeps the file git or the deploy replaced, which a reload would not see.
+Volume=../master:/opt/sashing:ro
+Volume=%E/sashing-ci:/etc/sashing-ci:ro
 # pw-check's socket, served by whoever reports to patchwork. Without it, only the reports
 # fail.
 Volume=pw-check:/run/pw-check
 
 [Service]
 StateDirectory=sashing
+# Reads master.cfg and the project again: the running builds go on. reporterjson.py, which
+# master.cfg imports, only changes with a restart.
+ExecReload=/usr/bin/podman kill --signal HUP sashing-master

@@ -1,5 +1,5 @@
-# The master: its state in the directory holding this file, its configuration in the
-# image. The start copies it there, where buildbot upgrade-master reads `configfile`.
+# The master: its state in the directory holding this file, its configuration in
+# /opt/sashing. The start copies it there, where buildbot upgrade-master reads `configfile`.
 
 import os
 import sys

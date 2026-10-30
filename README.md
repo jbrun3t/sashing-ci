@@ -3,7 +3,8 @@
 Kernel patch CI on [Buildbot](https://buildbot.net): given a message-id, apply the series
 from lore, check each of its patches, then build the series.
 
-- `master/`: the master image, `localhost/sashing-master`: Buildbot and
+- `master/`: the master, mounted from the checkout on its image,
+  `localhost/sashing-master`, which holds only Buildbot:
   - `master.cfg`: the flow, and what patchwork gets
   - `reporterjson.py`: a reporter writing JSON to a Unix socket
 - `tasks/`: the work, scripts that know nothing of Buildbot
@@ -78,8 +79,10 @@ systemctl --user start sashing-pod sashing-master sashing-worker@local1 sashing-
 To take a change:
 
 - a task: rebuild the worker image, restart the workers
-- `master.cfg` or `reporterjson.py`: rebuild the master image, restart the master
-- the project: restart the master
+- `master.cfg` or the project: reload the master, which the running builds survive:
+  `systemctl --user reload sashing-master`
+- `reporterjson.py` or `buildbot.tac`: restart the master
+- `master/Containerfile`, Buildbot: rebuild the master image, restart the master
 - A master restart ends the running builds.
 
 The image keeps the dtschema it was built with. Once the tree requires a newer one, the
@@ -94,7 +97,8 @@ systemctl --user restart sashing-worker@local1 sashing-worker@local2
 | Host | Container | |
 |---|---|---|
 | `~/.local/state/sashing/` | master: `/buildbot` | database |
-| `~/.config/sashing-ci/project.ini` | master: `/opt/sashing/project.ini` | the project |
+| the checkout's `master/` | master: `/opt/sashing` | the flow |
+| `~/.config/sashing-ci/` | master: `/etc/sashing-ci` | the project, `project.ini` |
 | volume `pw-check` | master: `/run/pw-check` | pw-check's socket |
 | `~/.cache/sashing/<worker>/` | worker: `/home/tuxmake` | builders' trees, b4's cache |
 | `~/.cache/sashing/ccache/` | workers: `/home/tuxmake/.ccache` | ccache, shared |
