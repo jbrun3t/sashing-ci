@@ -1,0 +1,18 @@
+{# A series run, a row of the list: folded; its tree fetched when first hovered or opened,
+   or, while it runs, given whole and polled. #}
+{% from '_macros.html' import badge, steps %}
+{% set msgid = b | prop('msgid') %}
+<li id="run-{{ b.buildid }}"
+    {%- if not b.complete %} hx-get="{{ url_for('node_fragment', buildid=b.buildid) }}" hx-trigger="every 5s" hx-swap="morph:outerHTML"{% endif %}>
+<details id="run-{{ b.buildid }}-d"
+    {%- if b.steps is not defined %} hx-get="{{ url_for('tree_fragment', buildid=b.buildid) }}" hx-trigger="mouseenter once, toggle once" hx-target="find ul" hx-swap="innerHTML"{% endif %}>
+<summary class="row">
+  {{ badge(b.results, b.state_string) }}
+  <span class="series" title="{{ msgid }}">{{ msgid }}</span>
+  <a class="run" href="{{ url_for('series', msgid=msgid) }}" title="This series' runs">#{{ b.number }}</a>
+  <span class="started" title="{{ b.started_at | full_time }}">{{ b.started_at | short_time }}</span>
+  <span class="duration">{{ b | duration }}</span>
+</summary>
+<ul>{% if b.steps is defined %}{{ steps(b) }}{% endif %}</ul>
+</details>
+</li>

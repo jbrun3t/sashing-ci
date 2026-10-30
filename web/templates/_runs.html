@@ -1,0 +1,9 @@
+{# A page of runs; while more follow, a last row fetching the next page as it shows. #}
+{% for b in runs %}
+{% include '_node.html' %}
+{% else %}
+{% if not page %}<li class="none">No run matches.</li>{% endif %}
+{% endfor %}
+{% if more %}
+<li class="none" hx-get="{{ link('runs_fragment', page=page + 1) }}" hx-trigger="revealed" hx-swap="outerHTML">Loading…</li>
+{% endif %}

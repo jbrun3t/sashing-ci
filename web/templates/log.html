@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import badge %}
+{% set msgid = (build | prop('series_msgid')) or (build | prop('msgid')) %}
+{% block title %}{{ step.name }} · {{ build | prop('msgid') }}{% endblock %}
+{% block eyebrow %} <span class="project">| {{ build | prop('projectname') }}</span>{% endblock %}
+{% block main %}
+<p class="crumbs" title="{{ build | prop('msgid') }}">
+  <a href="{{ url_for('series', msgid=msgid) }}">{{ msgid }}</a>
+  {% if build | prop('series_msgid') %}› {{ build | prop('msgid') }}{% endif %}
+</p>
+<h1 class="mono">{{ badge(step.results) }} {{ step.name }}{% if slug %} <span class="dim">{{ log.name }}</span>{% endif %}</h1>
+<p class="subtitle">
+  {{ step.state_string }}
+  {% if log %}· <a href="{{ url_for('raw', buildid=build.buildid, number=step.number, slug=slug) }}">raw</a>{% endif %}
+  {# The step's other logs. #}
+  {% for l in logs if l.slug != log.slug %}· <a href="{{ url_for('log', buildid=build.buildid, number=step.number, slug=l.slug) }}">{{ l.name }}</a> {% endfor %}
+</p>
+{% if log %}
+{% set buildid, number = build.buildid, step.number %}
+<pre class="log">{% include '_lines.html' %}</pre>
+{% else %}
+<p class="none">This step has no log.</p>
+{% endif %}
+{% endblock %}

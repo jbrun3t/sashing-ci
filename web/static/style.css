@@ -1,0 +1,269 @@
+/* sashing-ci's UI: one column on off-white paper, white cards, one muted green accent,
+   small uppercase labels. Light or dark as the reader's system prefers.
+   Sections: fonts, colours, page, status (the dashboard's head), search, the list of runs
+   and its trees, logs. */
+
+/* Fonts: vendored in fonts/, Latin only (Fontsource 5.3.0, OFL); other characters come
+   from the system's. */
+
+@font-face { font-family: Inter; font-weight: 400; font-display: swap; src: url(fonts/inter-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: Inter; font-weight: 600; font-display: swap; src: url(fonts/inter-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url(fonts/jetbrains-mono-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 600; font-display: swap; src: url(fonts/jetbrains-mono-latin-600-normal.woff2) format("woff2"); }
+
+/* Colours */
+
+:root {
+	color-scheme: light dark;
+	--paper: #f6f7f5;
+	--card: #fff;
+	--ink: #202622;
+	--muted: #78817b;
+	--line: #e4e8e4;
+	--accent: #376b52;
+	--soft: #eaf1ec;
+	--success: #2f7d4f;
+	--warnings: #a06a12;
+	--failure: #c0392b;
+	--running: #2f6db5;
+	--other: #7b5ea7;
+
+	/* Inter and JetBrains Mono, drawn to go together. One size for monospace; the rest:
+	   label, text, heading, figure, title. */
+	--sans: Inter, system-ui, sans-serif;
+	--mono: "JetBrains Mono", ui-monospace, monospace;
+	--mono-size: .93rem;
+	--label: .79rem;
+	--heading: 1.15rem;
+	--figure: 2rem;
+	--title: 2.6rem;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #111412;
+		--card: #191d1a;
+		--ink: #e4e9e5;
+		--muted: #8e9891;
+		--line: #2a302c;
+		--accent: #7fbf9c;
+		--soft: #1f2a24;
+		--success: #5cb67f;
+		--warnings: #d7a13f;
+		--failure: #e6675a;
+		--running: #6ea6e6;
+		--other: #a98fd6;
+	}
+}
+
+.success { --tone: var(--success); }
+.warnings { --tone: var(--warnings); }
+.failure { --tone: var(--failure); }
+.running { --tone: var(--running); }
+.other, .skipped, .exception, .retry, .cancelled { --tone: var(--other); }
+
+/* Page */
+
+* { box-sizing: border-box; }
+
+/* rem is the text's size. */
+html { font-size: 14px; }
+
+body {
+	margin: 0;
+	background: var(--paper);
+	color: var(--ink);
+	font: 1rem/1.5 var(--sans);
+	-webkit-font-smoothing: antialiased;
+}
+
+main { width: min(1100px, calc(100% - 40px)); margin: 0 auto; padding: 56px 0 48px; }
+
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--accent); }
+
+.eyebrow, .label, .row.head {
+	color: var(--muted);
+	font-size: var(--label);
+	font-weight: 600;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+}
+.eyebrow { margin: 0; color: var(--accent); letter-spacing: .14em; }
+.eyebrow .project { color: var(--ink); text-transform: none; letter-spacing: .02em; }
+
+h1 {
+	margin: 8px 0 4px;
+	font-size: var(--title);
+	font-weight: 600;
+	letter-spacing: -.04em;
+	line-height: 1.1;
+}
+h1.mono { font-size: var(--heading); letter-spacing: 0; line-height: 1.4; }
+.subtitle { margin: 0 0 4px; color: var(--muted); }
+.subtitle a { color: var(--accent); }
+.mono { font-family: var(--mono); word-break: break-all; }
+.dim { color: var(--muted); }
+
+.badge { display: inline-block; width: 1.2em; text-align: center; font: 600 1rem var(--sans); color: var(--tone, var(--muted)); }
+.badge.running { animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .3; } }
+
+/* Status: the project and who is up, then three cards */
+
+.title { display: flex; justify-content: space-between; align-items: end; gap: 1rem; margin-bottom: 28px; }
+.dots { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); }
+.dots > span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.dot.idle { background: var(--success); }
+.dot.building { background: var(--running); }
+.dot.offline { background: var(--failure); }
+
+.cards { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 10px; margin-bottom: 32px; }
+.card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 14px 16px;
+	background: var(--card);
+	border: 1px solid var(--line);
+	border-radius: 10px;
+}
+.figure { font-size: var(--figure); font-weight: 600; letter-spacing: -.03em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.figure small { font-size: 1rem; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+.caption { color: var(--muted); font-size: var(--label); }
+
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 4px; }
+.day { flex: 1; height: 100%; display: flex; align-items: flex-end; border-radius: 2px; }
+.day:hover { background: var(--soft); }
+.stack { width: 100%; min-height: 2px; display: flex; flex-direction: column-reverse; border-radius: 2px; overflow: hidden; background: var(--line); }
+.stack span { background: var(--tone); }
+
+/* Search, then the status filters */
+
+.search {
+	width: 100%;
+	height: 42px;
+	padding: 0 12px;
+	font: inherit;
+	color: var(--ink);
+	background: var(--card);
+	border: 1px solid var(--line);
+	border-radius: 7px;
+}
+.search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--soft); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 20px; }
+.filters a {
+	height: 30px;
+	padding: 0 12px;
+	display: inline-flex;
+	align-items: center;
+	color: var(--muted);
+	background: var(--card);
+	border: 1px solid var(--line);
+	border-radius: 7px;
+	text-transform: capitalize;
+}
+.filters a:hover { color: var(--ink); }
+.filters a.current { color: var(--accent); background: var(--soft); border-color: var(--accent); font-weight: 600; }
+
+/* The list of runs: rows of one grid, in a card, opening on trees.
+   A row's columns: fold marker, status, series, run, started, duration. */
+
+.row, .step {
+	display: grid;
+	align-items: baseline;
+	gap: 10px;
+}
+.row { grid-template-columns: 12px 72px minmax(0, 1fr) 48px 104px 72px; padding: 11px 16px; }
+.step { grid-template-columns: 12px 18px minmax(6rem, 18rem) minmax(0, 1fr) 72px; padding: 3px 16px 3px 0; }
+.step.build { grid-template-columns: 12px 18px minmax(0, 2fr) minmax(0, 1fr) 72px; }
+
+.row.head { padding-bottom: 8px; }
+/* A title and its sort arrow stay on one line, past a narrow column if need be. */
+.row.head > * { white-space: nowrap; }
+.row.head::before { content: ""; }
+.row.head a.current { color: var(--ink); }
+
+.series, .name, .summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+summary .series, .name { font-family: var(--mono); font-size: var(--mono-size); }
+.summary, .started, .duration { color: var(--muted); }
+.duration, .row .started, .row.head .duration { text-align: right; font-variant-numeric: tabular-nums; }
+.run { color: var(--muted); font-variant-numeric: tabular-nums; }
+.step a.name:hover, .summary a:hover { text-decoration: underline; }
+.summary a { color: var(--accent); }
+
+.runs {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	background: var(--card);
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	overflow: hidden;
+}
+.runs > li { border-bottom: 1px solid var(--line); }
+.runs > li:last-child { border-bottom: 0; }
+.runs > li > details[open] { background: var(--paper); }
+.runs > li > details[open] > summary { background: var(--card); border-bottom: 1px solid var(--line); }
+.runs > li > details > ul { padding: 8px 0 10px 28px; }
+.none { padding: 16px; color: var(--muted); text-align: center; }
+
+summary { cursor: pointer; list-style: none; }
+summary::-webkit-details-marker { display: none; }
+summary::before { content: "▸"; color: var(--muted); font-size: .8em; }
+details[open] > summary::before { content: "▾"; }
+.leaf::before { content: ""; }
+.runs > li > details > summary:hover { background: var(--soft); }
+
+/* The tree in an opened run: each level under a guide, a branch to each node. */
+.tree ul { list-style: none; margin: 0; padding: 0; }
+.tree ul ul { margin-left: 6px; }
+.tree ul li { position: relative; padding-left: 16px; }
+.tree ul li::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	height: 100%;
+	border-left: 1px solid var(--line);
+}
+.tree ul li:last-child::before { height: 1em; }
+.tree ul li::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 1em;
+	width: 11px;
+	border-top: 1px solid var(--line);
+}
+
+/* Logs */
+
+.crumbs { margin: 8px 0 0; font-family: var(--mono); font-size: var(--mono-size); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crumbs a { color: var(--accent); }
+
+pre.log {
+	margin-top: 20px;
+	padding: 16px;
+	background: var(--card);
+	border: 1px solid var(--line);
+	border-radius: 10px;
+	overflow-x: auto;
+	font: var(--mono-size)/1.5 var(--mono);
+}
+pre.log .h { color: var(--muted); }
+pre.log .e { color: var(--failure); }
+pre.log .end { display: block; margin-top: 12px; font-family: var(--sans); }
+
+@media (max-width: 760px) {
+	main { padding-top: 32px; }
+	.title { flex-direction: column; align-items: start; }
+	.cards { grid-template-columns: 1fr 1fr; }
+	.cards .card:last-child { grid-column: span 2; }
+	.row { grid-template-columns: 12px 72px minmax(0, 1fr) 40px 64px; padding: 10px 12px; }
+	.row .started { display: none; }
+	.step { grid-template-columns: 12px 18px minmax(0, 1fr) 64px; }
+	.step .summary { display: none; }
+}

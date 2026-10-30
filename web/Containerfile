@@ -1,0 +1,17 @@
+# sashing-ci's read-only web UI: Flask, gunicorn, and the htmx scripts the pages load. The
+# app, the checkout's web/, is mounted on /opt/sashing-web. Build from the repository's root:
+#
+#   podman build -f web/Containerfile -t localhost/sashing-web .
+
+FROM docker.io/library/python:3.13-alpine
+RUN pip install --no-cache-dir --root-user-action=ignore flask==3.1.3 gunicorn==26.2.0
+
+# Outside the mount, which would hide them. htmx keeps its major's API; idiomorph, at 0.x,
+# only its minor's.
+RUN mkdir /opt/sashing-js \
+ && wget -q -P /opt/sashing-js https://unpkg.com/htmx.org@2/dist/htmx.min.js \
+        https://unpkg.com/idiomorph@0.8/dist/idiomorph-ext.min.js
+
+WORKDIR /opt/sashing-web
+# Threads: a request mostly waits on the master's API.
+CMD ["gunicorn", "--bind", "0.0.0.0:8011", "--workers", "1", "--threads", "4", "--access-logfile", "-", "app:app"]

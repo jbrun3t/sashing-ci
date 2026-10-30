@@ -1,6 +1,8 @@
 # The master and the workers of this machine, which reach it on localhost.
+# The master's web UI and REST API, port 8010, are only reachable from the pod's
+# containers: whoever reaches them can start and stop runs.
 
 [Pod]
 PodName=sashing
-# The web UI and REST API.
-PublishPort=127.0.0.1:8010:8010
+# The read-only web UI, sashing-web.
+PublishPort=127.0.0.1:8011:8011

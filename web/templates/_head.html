@@ -1,0 +1,17 @@
+{# The list's column titles: links sorting by their column, the current one flipping. #}
+{% macro col(name, label) %}
+{%- if view is defined -%}
+{% set current = view.sort == name %}
+<a class="{{ name }}{{ ' current' if current }}" href="{{ link(sort=name, order=('asc' if view.order == 'desc' else 'desc') if current else none) }}">
+  {{- label }}{% if current %} {{ '↑' if view.order == 'asc' else '↓' }}{% endif %}</a>
+{%- else -%}
+<span class="{{ name }}">{{ label }}</span>
+{%- endif -%}
+{% endmacro %}
+<div class="row head"{% if view is defined %} hx-boost="true" hx-select="#table" hx-target="#table" hx-swap="outerHTML" hx-select-oob="#search"{% endif %}>
+  {{ col('status', 'Status') }}
+  {{ col('series', 'Series') }}
+  {{ col('run', 'Run') }}
+  {{ col('started', 'Started') }}
+  {{ col('duration', 'Duration') }}
+</div>

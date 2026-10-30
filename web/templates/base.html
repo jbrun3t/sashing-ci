@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %} · sashing-ci</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="{{ url_for('js', name='htmx.min.js') }}"></script>
+<script src="{{ url_for('js', name='idiomorph-ext.min.js') }}"></script>
+<script>
+  // A polled node is morphed in place: what the reader unfolded stays unfolded.
+  Idiomorph.defaults.callbacks.beforeAttributeUpdated = (name) => name !== 'open';
+</script>
+</head>
+<body hx-ext="morph">
+<main>
+<p class="eyebrow"><a href="{{ url_for('index') }}">sashing-ci</a>{% block eyebrow %}{% endblock %}</p>
+{% block main %}{% endblock %}
+</main>
+</body>
+</html>

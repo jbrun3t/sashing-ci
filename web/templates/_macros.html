@@ -1,0 +1,44 @@
+{% set GLYPHS = {'success': '✔', 'warnings': '⚠', 'failure': '✘', 'skipped': '↷',
+                 'exception': '‼', 'retry': '↻', 'cancelled': '⊘', 'running': '●',
+                 'other': '⊘'} %}
+
+{# A result's icon: code is a Buildbot result, or the name of one. #}
+{% macro badge(code, title=none) %}{% set r = code if code is string else code | result %}<span class="badge {{ r }}" title="{{ title or r }}">{{ GLYPHS.get(r, '?') }}</span>{% endmacro %}
+
+{% macro step_row(b, s) %}
+  {{ badge(s.results, s.state_string) }}
+  <a class="name" href="{{ url_for('log', buildid=b.buildid, number=s.number) }}">{{ s.name }}</a>
+  <span class="summary">{{ s.state_string }}</span>
+  <span class="duration">{{ s | duration }}</span>
+{% endmacro %}
+
+{# A build's steps, and under a step the builds it triggered, folded. Ids let a morph
+   match each node of a polled run to the one in the page. #}
+{% macro steps(b) %}
+{% for s in b.steps %}
+<li id="step-{{ s.stepid }}">
+  {% if s.builds %}
+  <details id="step-{{ s.stepid }}-d">
+  <summary class="step">{{ step_row(b, s) }}</summary>
+  <ul>
+  {% for c in s.builds %}
+  <li id="build-{{ c.buildid }}">
+    <details id="build-{{ c.buildid }}-d">
+    <summary class="step build">
+      {{ badge(c.results, c.state_string) }}
+      <span class="name series">{{ (c | prop('msgid')) or ('#' ~ c.number) }}</span>
+      <span class="summary">{{ c.state_string }}</span>
+      <span class="duration">{{ c | duration }}</span>
+    </summary>
+    <ul>{{ steps(c) }}</ul>
+    </details>
+  </li>
+  {% endfor %}
+  </ul>
+  </details>
+  {% else %}
+  <div class="step leaf">{{ step_row(b, s) }}</div>
+  {% endif %}
+</li>
+{% endfor %}
+{% endmacro %}

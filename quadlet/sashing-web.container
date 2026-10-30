@@ -1,0 +1,11 @@
+# The read-only web UI, which the pod publishes. See README.md.
+
+[Unit]
+Description=sashing: read-only web UI
+
+[Container]
+ContainerName=sashing-web
+Pod=sashing.pod
+Image=localhost/sashing-web:latest
+# The app, relative to this file: the checkout's. A directory: a restart takes an update.
+Volume=../web:/opt/sashing-web:ro

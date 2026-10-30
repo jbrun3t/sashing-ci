@@ -9,6 +9,8 @@ from lore, check each of its patches, then build the series.
   - `reporterjson.py`: a reporter writing JSON to a Unix socket
 - `tasks/`: the work, scripts that know nothing of Buildbot
 - `worker/`: the worker image, `localhost/sashing-worker`: toolchains, b4 and the tasks
+- `web/`: the read-only web UI, Flask, mounted from the checkout on its image,
+  `localhost/sashing-web`
 - `quadlet/`: the rootless Quadlet units
 - `samples/`: projects, such as `linux-clk.ini`: the master reads its own from
   `~/.config/sashing-ci/project.ini`
@@ -65,6 +67,7 @@ Presets are tuxmake configuration files in `tasks/tuxmake/`; `default` applies t
 ```sh
 podman build -f master/Containerfile -t localhost/sashing-master .
 podman build -f worker/Containerfile -t localhost/sashing-worker .
+podman build -f web/Containerfile -t localhost/sashing-web .
 ln -s "$PWD" ~/.config/containers/systemd/sashing
 mkdir -p ~/.config/sashing-ci && cp samples/linux-clk.ini ~/.config/sashing-ci/project.ini
 head -c 24 /dev/urandom | base64 | podman secret create sashing-worker-pass -
@@ -83,6 +86,7 @@ To take a change:
   `systemctl --user reload sashing-master`
 - `reporterjson.py` or `buildbot.tac`: restart the master
 - `master/Containerfile`, Buildbot: rebuild the master image, restart the master
+- `web/`: restart sashing-web; `web/Containerfile`: rebuild its image first
 - A master restart ends the running builds.
 
 The image keeps the dtschema it was built with. Once the tree requires a newer one, the
@@ -99,6 +103,7 @@ systemctl --user restart sashing-worker@local1 sashing-worker@local2
 | `~/.local/state/sashing/` | master: `/buildbot` | database |
 | the checkout's `master/` | master: `/opt/sashing` | the flow |
 | `~/.config/sashing-ci/` | master: `/etc/sashing-ci` | the project, `project.ini` |
+| the checkout's `web/` | sashing-web: `/opt/sashing-web` | the web UI |
 | volume `pw-check` | master: `/run/pw-check` | pw-check's socket |
 | `~/.cache/sashing/<worker>/` | worker: `/home/tuxmake` | builders' trees, b4's cache |
 | `~/.cache/sashing/ccache/` | workers: `/home/tuxmake/.ccache` | ccache, shared |
@@ -110,9 +115,34 @@ systemctl --user restart sashing-worker@local1 sashing-worker@local2
 
 ## Use
 
-The web UI is at <http://localhost:8010>: the `series` builder has the form starting a run.
+The web UI, read-only, is at <http://localhost:8011>: `sashing-web`, which only reads the
+master's REST API. Give the project's `url` its public address, served over HTTPS by a
+proxy to this port: patchwork's checks link to its log pages.
 
-Start a run from the REST API; the result holds the buildset id:
+- `/`: the dashboard: the series checked, the runs running and queued, runs per day, who
+  is online; then the series runs, each a folded tree opening on its builds, their steps,
+  and the patch builds under `patches`. The query selects them: `q`, part of the
+  message-id; `status`, once per status shown: `running`, `success`, `warnings`,
+  `failure`, `other`; `sort`: `status`, `series`, `run`, `started` (the default) or
+  `duration`; `order`: `asc` or `desc`
+- `/series/<message-id>`: the runs of a series, as trees
+- `/builds/<buildid>/steps/<number>`: a step's log; `.../raw`, as text. A step's other
+  logs: `.../logs/<slug>`
+
+Running runs and logs update in place: the pages poll fragments of the app with htmx.
+The pages are Jinja templates, `web/templates/_*.html` the fragments. The image fetches
+htmx and its idiomorph extension (0BSD), at the versions `web/Containerfile` names.
+Vendored in `web/static/`: the fonts Inter and JetBrains Mono (OFL, licences in
+`fonts/`).
+
+Buildbot's own UI and REST API, port 8010, start and stop runs: only the pod's containers
+reach them, such as the one the hook runs in. The examples run curl in the pod:
+
+```sh
+alias curl='podman run --rm -i --pod sashing docker.io/curlimages/curl'
+```
+
+Start a run; the result holds the buildset id:
 
 ```sh
 curl -X POST localhost:8010/api/v2/forceschedulers/series -H 'Content-Type: application/json' \
@@ -137,7 +167,7 @@ Results: 0 success, 1 warnings, 2 failure, 3 skipped, 4 exception, 5 retry, 6 ca
 
 - In the master's database, `~/.local/state/sashing/state.sqlite`, compressed, kept until
   deleted: about 200 KB per build.
-- Patchwork's checks link to them by builder and build number: keep the database.
+- Patchwork's checks link to them by build id and step number: keep the database.
 - Back it up while the master runs; restore it with the master stopped:
 
 ```sh

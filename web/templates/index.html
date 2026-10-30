@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Series{% endblock %}
+{% block main %}
+{% include '_status.html' %}
+{# Typing fetches the view with the search the box holds, and shows its table. #}
+<input id="search" class="search" type="search" name="q" value="{{ view.q }}" placeholder="Search a series by message-id…"
+       autocomplete="off" hx-get="{{ link(q=none) }}" hx-trigger="input changed delay:300ms, search"
+       hx-select="#table" hx-target="#table" hx-swap="outerHTML" hx-push-url="true">
+<div id="table">
+{# Filters and sorts swap the table, and the search box, which carries them. #}
+<nav class="filters" hx-boost="true" hx-select="#table" hx-target="#table" hx-swap="outerHTML" hx-select-oob="#search">
+  <a class="{{ 'current' if not view.status }}" href="{{ link(status=[]) }}">all</a>
+  {% for f in ['running', 'success', 'warnings', 'failure', 'other'] %}
+  <a class="{{ 'current' if f in view.status }}" href="{{ link(status=toggled(f)) }}">{{ f }}</a>
+  {% endfor %}
+</nav>
+{% include '_head.html' %}
+<ul class="runs tree">
+{% include '_runs.html' %}
+</ul>
+</div>
+{% endblock %}

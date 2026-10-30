@@ -1,0 +1,46 @@
+{# The dashboard's head, polled: the project and who is up, then the figures. #}
+{% set s = status %}
+<section id="status" hx-get="{{ url_for('status_fragment') }}" hx-trigger="every 10s" hx-swap="outerHTML">
+<div class="title">
+  <div>
+    <h1>{{ s.project.name if s.up else 'sashing-ci' }}</h1>
+    {% if s.up and s.project.description %}<p class="subtitle">{{ s.project.description }}</p>{% endif %}
+  </div>
+  <div class="dots">
+    <span title="{{ 'up' if s.up else 'unreachable' }}"><i class="dot {{ 'idle' if s.up else 'offline' }}"></i>master</span>
+    {% for w in s.workers %}
+    <span title="{{ w.state }}"><i class="dot {{ w.state }}"></i>{{ w.name }}</span>
+    {% endfor %}
+  </div>
+</div>
+{% if s.up %}
+<div class="cards">
+  <div class="card">
+    <div class="label">Series checked</div>
+    <div class="figure">{{ s.series }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Now</div>
+    <div class="figure">{{ s.running }} <small>running</small></div>
+    <div class="caption">{{ s.queued }} queued</div>
+  </div>
+  <div class="card">
+    <div class="label">Last 30 days</div>
+    <div class="bars">
+    {% for d in s.days %}
+      <div class="day" title="{{ (d.day | short_time)[:6] }}: {{ d.runs.total() }} runs">
+        <div class="stack" style="height: {{ (100 * d.runs.total() / s.peak) | round }}%">
+        {% for r in ['success', 'warnings', 'failure', 'running', 'other'] if d.runs[r] %}
+          <span class="{{ r }}" style="flex: {{ d.runs[r] }}"></span>
+        {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+    <div class="caption">{{ s.month }} runs</div>
+  </div>
+</div>
+{% else %}
+<p class="subtitle">The master is unreachable.</p>
+{% endif %}
+</section>

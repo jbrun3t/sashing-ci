@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block title %}{{ msgid }}{% endblock %}
+{% block main %}
+<h1 class="mono">{{ msgid }}</h1>
+{% include '_head.html' %}
+<ul class="runs tree">
+{% include '_runs.html' %}
+</ul>
+{% endblock %}
