@@ -51,6 +51,13 @@ def series_builds():
     return get('builders/series/builds', order='-buildid', property='msgid')['builds']
 
 
+def series_requests(**query):
+    """The runs of the `series` builder asked for, newest first, with their message-id."""
+    builderid = get('builders/series')['builders'][0]['builderid']
+    return get(f'builders/{builderid}/buildrequests', order='-buildrequestid', property='msgid',
+               **query)['buildrequests']
+
+
 def build(buildid):
     return get(f'builds/{buildid}', property=['msgid', 'series_msgid', 'projectname'])['builds'][0]
 
@@ -145,16 +152,17 @@ def prop(build, name):
 def status(runs):
     """The project, who is up, the jobs running and queued, and what was checked: the
     series from runs, the series builds, newest first. Without the master, only that it is
-    unreachable. Either way, the newest run, which the page has seen."""
-    newest = runs[0]['buildid'] if runs else 0
+    unreachable. The newest series run asked for, which the page has seen: 0 without the
+    master."""
     try:
+        newest = next((r['buildrequestid'] for r in series_requests(limit=1)), 0)
         project = get('projects')['projects'][0]
         workers = get('workers')['workers']
         running = get('builds', complete='false')['builds']
         queued = len(get('buildrequests', claimed='false')['buildrequests'])
         patches = get('builders/patch/builds', property='msgid')['builds']
     except (urllib.error.URLError, OSError):
-        return {'up': False, 'newest': newest}
+        return {'up': False, 'newest': 0}
 
     # Runs per day over the last 30 days, oldest first, by bucket.
     today = int(time.time() // DAY)
@@ -202,7 +210,7 @@ def view():
     sort = a.get('sort') if a.get('sort') in SORTS else 'started'
     order = a.get('order') if a.get('order') in ('asc', 'desc') else SORTS[sort][1]
     return {'q': a.get('q', '').strip(),
-            'status': [s for s in BUCKETS if s in a.getlist('status')],
+            'status': [s for s in ['queued', *BUCKETS] if s in a.getlist('status')],
             'sort': sort, 'order': order}
 
 
@@ -224,15 +232,26 @@ def toggled(status):
     return [s for s in shown if s != status] if status in shown else shown + [status]
 
 
+def shown(item, status):
+    """Whether the current view shows item, a run or a request, of status."""
+    v = view()
+    return (v['q'].lower() in (prop(item, 'msgid') or '').lower()
+            and (not v['status'] or status in v['status']))
+
+
 def runs_page(runs, page):
     """The page of runs, among the series builds, the current view selects, and whether
     more follow."""
     v = view()
-    found = [b for b in runs
-             if v['q'].lower() in (prop(b, 'msgid') or '').lower()
-             and (not v['status'] or bucket(b['results']) in v['status'])]
+    found = [b for b in runs if shown(b, bucket(b['results']))]
     found.sort(key=SORTS[v['sort']][0], reverse=v['order'] == 'desc')
     return with_trees(found[page * PAGE:(page + 1) * PAGE]), len(found) > (page + 1) * PAGE
+
+
+def queued():
+    """The series runs no worker has taken yet the current view selects: atop the list,
+    whatever its order."""
+    return [r for r in series_requests(claimed='false') if shown(r, 'queued')]
 
 
 # Pages, and the fragments htmx fetches
@@ -247,14 +266,14 @@ def js(name):
 def index():
     runs = series_builds()
     rows, more = runs_page(runs, 0)
-    return render_template('index.html', status=status(runs), view=view(), runs=rows, page=0,
-                           more=more)
+    return render_template('index.html', status=status(runs), view=view(), queued=queued(),
+                           runs=rows, page=0, more=more)
 
 
 @app.get('/status')
 def status_fragment():
-    """The status, and a new-run event once a run newer than the page's, `seen`, started:
-    the list reloads on it."""
+    """The status, and a new-run event once a run newer than the page's, `seen`, was asked
+    for: the list reloads on it."""
     s = status(series_builds())
     new = s['newest'] > request.args.get('seen', s['newest'], type=int)
     return render_template('_status.html', status=s), {'HX-Trigger': 'new-run'} if new else {}
@@ -271,9 +290,11 @@ def runs_fragment():
 @app.get('/series/<path:msgid>')
 def series(msgid):
     found = [b for b in series_builds() if prop(b, 'msgid') == msgid]
-    if not found:
+    waiting = [r for r in series_requests(claimed='false') if prop(r, 'msgid') == msgid]
+    if not found and not waiting:
         abort(404)
-    return render_template('series.html', msgid=msgid, runs=with_trees(found), more=False)
+    return render_template('series.html', msgid=msgid, queued=waiting, runs=with_trees(found),
+                           more=False)
 
 
 @app.get('/builds/<int:buildid>/tree')
@@ -286,6 +307,19 @@ def node_fragment(buildid):
     """A running series run's node, polled: 286 once it is complete stops htmx polling."""
     b = tree(build(buildid))
     return render_template('_node.html', b=b), 286 if b['complete'] else 200
+
+
+@app.get('/requests/<int:brid>')
+def request_fragment(brid):
+    """A queued series run's row, polled: once a worker took it, its run's node, which polls
+    on; once cancelled, nothing, and 286 stops the polling."""
+    builds = get(f'buildrequests/{brid}/builds')['builds']
+    if builds:
+        return node_fragment(builds[-1]['buildid'])
+    r = get(f'buildrequests/{brid}', property='msgid')['buildrequests'][0]
+    if r['complete']:
+        return '', 286
+    return render_template('_queued.html', r=r)
 
 
 # Logs: a step's first at the step's own address, any other by its slug

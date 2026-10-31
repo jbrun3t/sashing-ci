@@ -1,0 +1,13 @@
+{# A series run no worker has taken yet: polled until one does, when its run's node
+   replaces it. #}
+{% from '_macros.html' import badge %}
+{% set msgid = r | prop('msgid') %}
+<li id="request-{{ r.buildrequestid }}" hx-get="{{ url_for('request_fragment', brid=r.buildrequestid) }}" hx-trigger="{{ POLL }}" hx-swap="morph:outerHTML">
+<div class="row queued">
+  {{ badge('queued') }}
+  <span class="series" title="{{ msgid }}">{{ msgid }}</span>
+  <span class="run"></span>
+  <span class="started" title="Queued {{ r.submitted_at | full_time }}">{{ r.submitted_at | short_time }}</span>
+  <span class="duration"></span>
+</div>
+</li>

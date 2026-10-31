@@ -1,6 +1,6 @@
 {% set GLYPHS = {'success': '✔', 'warnings': '⚠', 'failure': '✘', 'skipped': '↷',
                  'exception': '‼', 'retry': '↻', 'cancelled': '⊘', 'running': '●',
-                 'other': '⊘'} %}
+                 'queued': '○', 'other': '⊘'} %}
 
 {# A result's icon: code is a Buildbot result, or the name of one. #}
 {% macro badge(code, title=none) %}{% set r = code if code is string else code | result %}<span class="badge {{ r }}" title="{{ title or r }}">{{ GLYPHS.get(r, '?') }}</span>{% endmacro %}

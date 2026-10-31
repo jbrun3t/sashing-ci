@@ -13,7 +13,7 @@
 {# Filters and sorts swap the table, and the search box, which carries them. #}
 <nav class="filters" hx-boost="true" hx-select="#table" hx-target="#table" hx-swap="outerHTML" hx-select-oob="#search">
   <a class="{{ 'current' if not view.status }}" href="{{ link(status=[]) }}">all</a>
-  {% for f in ['running', 'success', 'warnings', 'failure', 'other'] %}
+  {% for f in ['queued', 'running', 'success', 'warnings', 'failure', 'other'] %}
   <a class="{{ 'current' if f in view.status }}" href="{{ link(status=toggled(f)) }}">{{ f }}</a>
   {% endfor %}
 </nav>

@@ -183,11 +183,11 @@ h1.mono { font-size: var(--heading); letter-spacing: 0; line-height: 1.4; }
 .row.head { padding-bottom: 8px; }
 /* A title and its sort arrow stay on one line, past a narrow column if need be. */
 .row.head > * { white-space: nowrap; }
-.row.head::before { content: ""; }
+.row.head::before, .row.queued::before { content: ""; }
 .row.head a.current { color: var(--ink); }
 
 .series, .name, .summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-summary .series, .name { font-family: var(--mono); font-size: var(--mono-size); }
+summary .series, .row.queued .series, .name { font-family: var(--mono); font-size: var(--mono-size); }
 .summary, .started, .duration { color: var(--muted); }
 .duration, .row .started, .row.head .duration { text-align: right; font-variant-numeric: tabular-nums; }
 .run { color: var(--muted); font-variant-numeric: tabular-nums; }
