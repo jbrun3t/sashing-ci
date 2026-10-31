@@ -141,13 +141,14 @@ def prop(build, name):
 # The dashboard's head
 
 def status(runs):
-    """The project, who is up, and what was checked, from runs, the series builds.
-    Without the master, only that it is unreachable."""
+    """The project, who is up, the jobs running and queued, and what was checked: the
+    series from runs, the series builds. Without the master, only that it is unreachable."""
     try:
         project = get('projects')['projects'][0]
         workers = get('workers')['workers']
-        busy = {b['workerid'] for b in get('builds', complete='false')['builds']}
+        running = get('builds', complete='false')['builds']
         queued = len(get('buildrequests', claimed='false')['buildrequests'])
+        patches = get('builders/patch/builds', property='msgid')['builds']
     except (urllib.error.URLError, OSError):
         return {'up': False}
 
@@ -159,6 +160,7 @@ def status(runs):
         if 0 <= age < 30:
             days[29 - age]['runs'][bucket(b['results'])] += 1
 
+    busy = {b['workerid'] for b in running}
     for w in workers:
         w['state'] = ('offline' if not w['connected_to']
                       else 'building' if w['workerid'] in busy else 'idle')
@@ -166,7 +168,8 @@ def status(runs):
         'up': True,
         'project': project,
         'series': len({prop(b, 'msgid') for b in runs}),
-        'running': sum(1 for b in runs if not b['complete']),
+        'patches': len({prop(b, 'msgid') for b in patches}),
+        'running': len(running),
         'queued': queued,
         'days': days,
         'month': sum(d['runs'].total() for d in days),
