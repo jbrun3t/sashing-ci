@@ -116,8 +116,7 @@ systemctl --user restart sashing-worker@local1 sashing-worker@local2
 ## Use
 
 The web UI, read-only, is at <http://localhost:8011>: `sashing-web`, which only reads the
-master's REST API. Give the project's `url` its public address, served over HTTPS by a
-proxy to this port: patchwork's checks link to its log pages.
+master's REST API. The project's `url` is where patchwork's checks link to its log pages.
 
 - `/`: the dashboard: the series checked, the runs running and queued, runs per day, who
   is online; then the series runs, each a folded tree opening on its builds, their steps,
