@@ -1,0 +1,4 @@
+# The workers' git, and b4's, read by every task.
+[b4]
+	# v and x: b4's default colors them for a terminal, which the logs are not.
+	attestation-checkmarks = simple

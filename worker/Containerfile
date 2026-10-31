@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # WORKERPASS, which it removes from the builds' environment.
 COPY --from=buildbot /buildbot/buildbot.tac /opt/sashing/buildbot.tac
 COPY worker/ccache.conf /etc/ccache.conf
+COPY worker/gitconfig /etc/gitconfig
 COPY tasks/ /opt/sashing/tasks/
 
 # The venv last: python3 stays the system's, with the kernel scripts' modules.
