@@ -4,7 +4,7 @@
 {% for stream, text in lines %}<span class="{{ stream }}">{{ text }}</span>
 {% endfor %}
 {%- if not log.complete -%}
-<span hx-get="{{ url_for('lines_fragment', buildid=buildid, number=number, slug=slug, **{'from': start}) }}" hx-trigger="every 2s" hx-swap="outerHTML"></span>
+<span hx-get="{{ url_for('lines_fragment', buildid=buildid, number=number, slug=slug, **{'from': start}) }}" hx-trigger="{{ POLL }}" hx-swap="outerHTML"></span>
 {%- elif end -%}
 <span class="end">{{ badge(end.results) }} {{ end.state_string }}</span>
 {%- endif %}

@@ -22,6 +22,8 @@ app = Flask(__name__)
 # The styles, scripts and fonts: kept by browsers, unchecked, for 5 minutes. A change
 # reaches readers within that time.
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 300
+# How often the pages poll what changes: the status, running runs and logs.
+app.jinja_env.globals['POLL'] = 'every 10s'
 
 
 # The master's REST API
@@ -142,7 +144,9 @@ def prop(build, name):
 
 def status(runs):
     """The project, who is up, the jobs running and queued, and what was checked: the
-    series from runs, the series builds. Without the master, only that it is unreachable."""
+    series from runs, the series builds, newest first. Without the master, only that it is
+    unreachable. Either way, the newest run, which the page has seen."""
+    newest = runs[0]['buildid'] if runs else 0
     try:
         project = get('projects')['projects'][0]
         workers = get('workers')['workers']
@@ -150,7 +154,7 @@ def status(runs):
         queued = len(get('buildrequests', claimed='false')['buildrequests'])
         patches = get('builders/patch/builds', property='msgid')['builds']
     except (urllib.error.URLError, OSError):
-        return {'up': False}
+        return {'up': False, 'newest': newest}
 
     # Runs per day over the last 30 days, oldest first, by bucket.
     today = int(time.time() // DAY)
@@ -166,6 +170,7 @@ def status(runs):
                       else 'building' if w['workerid'] in busy else 'idle')
     return {
         'up': True,
+        'newest': newest,
         'project': project,
         'series': len({prop(b, 'msgid') for b in runs}),
         'patches': len({prop(b, 'msgid') for b in patches}),
@@ -248,7 +253,11 @@ def index():
 
 @app.get('/status')
 def status_fragment():
-    return render_template('_status.html', status=status(series_builds()))
+    """The status, and a new-run event once a run newer than the page's, `seen`, started:
+    the list reloads on it."""
+    s = status(series_builds())
+    new = s['newest'] > request.args.get('seen', s['newest'], type=int)
+    return render_template('_status.html', status=s), {'HX-Trigger': 'new-run'} if new else {}
 
 
 @app.get('/runs')

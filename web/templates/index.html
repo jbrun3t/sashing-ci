@@ -7,6 +7,9 @@
        autocomplete="off" hx-get="{{ link(q=none) }}" hx-trigger="input changed delay:300ms, search"
        hx-select="#table" hx-target="#table" hx-swap="outerHTML" hx-push-url="true">
 <div id="table">
+{# A new run reloads the view, morphed: what is unfolded stays so. Not on #table, whose
+   rows would inherit its hx-select. #}
+<span hx-get="{{ link() }}" hx-trigger="new-run from:body" hx-select="#table" hx-target="#table" hx-swap="morph:outerHTML"></span>
 {# Filters and sorts swap the table, and the search box, which carries them. #}
 <nav class="filters" hx-boost="true" hx-select="#table" hx-target="#table" hx-swap="outerHTML" hx-select-oob="#search">
   <a class="{{ 'current' if not view.status }}" href="{{ link(status=[]) }}">all</a>

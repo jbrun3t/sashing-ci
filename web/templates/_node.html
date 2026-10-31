@@ -3,7 +3,7 @@
 {% from '_macros.html' import badge, steps %}
 {% set msgid = b | prop('msgid') %}
 <li id="run-{{ b.buildid }}"
-    {%- if not b.complete %} hx-get="{{ url_for('node_fragment', buildid=b.buildid) }}" hx-trigger="every 5s" hx-swap="morph:outerHTML"{% endif %}>
+    {%- if not b.complete %} hx-get="{{ url_for('node_fragment', buildid=b.buildid) }}" hx-trigger="{{ POLL }}" hx-swap="morph:outerHTML"{% endif %}>
 <details id="run-{{ b.buildid }}-d"
     {%- if b.steps is not defined %} hx-get="{{ url_for('tree_fragment', buildid=b.buildid) }}" hx-trigger="mouseenter once, toggle once" hx-target="find ul" hx-swap="innerHTML"{% endif %}>
 <summary class="row">

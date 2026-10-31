@@ -1,6 +1,6 @@
 {# The dashboard's head, polled: the project and who is up, then the figures. #}
 {% set s = status %}
-<section id="status" hx-get="{{ url_for('status_fragment') }}" hx-trigger="every 10s" hx-swap="outerHTML">
+<section id="status" hx-get="{{ url_for('status_fragment', seen=s.newest) }}" hx-trigger="{{ POLL }}" hx-swap="outerHTML">
 <div class="title">
   <div>
     <h1>{{ s.project.name if s.up else 'sashing-ci' }}</h1>
