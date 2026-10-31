@@ -14,10 +14,10 @@ Image=localhost/sashing-worker:latest
 Environment=WORKERNAME=%i BUILDMASTER=localhost
 Secret=sashing-worker-pass,type=env,target=WORKERPASS
 # The worker's home: the builders' trees and b4's cache. U: owned by the image's
-# `tuxmake` user, i.e. one of the host user's subuids.
-Volume=%C/sashing/%i:/home/tuxmake:U
+# `sashing` user, i.e. one of the host user's subuids.
+Volume=%C/sashing/%i:/home/sashing:U
 # The ccache of every worker of this machine: one worker's builds hit another's.
-Volume=%C/sashing/ccache:/home/tuxmake/.ccache:U
+Volume=%C/sashing/ccache:/home/sashing/.ccache:U
 
 [Service]
 CacheDirectory=sashing/%i sashing/ccache

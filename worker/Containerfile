@@ -1,5 +1,5 @@
-# A Buildbot worker with the kernel toolchains and the tasks, run as the image's
-# `tuxmake` user. Build from the repository's root:
+# A Buildbot worker with the kernel toolchains and the tasks, run as a `sashing` user.
+# Build from the repository's root:
 #
 #   podman build -f worker/Containerfile -t localhost/sashing-worker .
 #
@@ -29,6 +29,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && /opt/venv/bin/pip install --no-cache-dir "b4==$B4_VERSION" "buildbot-worker==$BUILDBOT_VERSION" \
         dtschema "yamllint==$YAMLLINT_VERSION"
 
+RUN useradd -m sashing
+
 # The official worker's: configured by BUILDMASTER, BUILDMASTER_PORT, WORKERNAME and
 # WORKERPASS, which it removes from the builds' environment.
 COPY --from=buildbot /buildbot/buildbot.tac /opt/sashing/buildbot.tac
@@ -39,7 +41,7 @@ COPY tasks/ /opt/sashing/tasks/
 # The venv last: python3 stays the system's, with the kernel scripts' modules.
 ENV PATH=/opt/sashing/tasks:$PATH:/opt/venv/bin
 # The worker's home persists: the builders' trees, b4's cache, and ccache's (~/.ccache).
-ENV BUILDBOT_BASEDIR=/home/tuxmake
-USER tuxmake
-WORKDIR /home/tuxmake
+ENV BUILDBOT_BASEDIR=/home/sashing
+USER sashing
+WORKDIR /home/sashing
 CMD ["twistd", "--pidfile=", "-ny", "/opt/sashing/buildbot.tac"]

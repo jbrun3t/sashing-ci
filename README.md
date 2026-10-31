@@ -105,8 +105,8 @@ systemctl --user restart sashing-worker@local1 sashing-worker@local2
 | `~/.config/sashing-ci/` | master: `/etc/sashing-ci` | the project, `project.ini` |
 | the checkout's `web/` | sashing-web: `/opt/sashing-web` | the web UI |
 | volume `pw-check` | master: `/run/pw-check` | pw-check's socket |
-| `~/.cache/sashing/<worker>/` | worker: `/home/tuxmake` | builders' trees, b4's cache |
-| `~/.cache/sashing/ccache/` | workers: `/home/tuxmake/.ccache` | ccache, shared |
+| `~/.cache/sashing/<worker>/` | worker: `/home/sashing` | builders' trees, b4's cache |
+| `~/.cache/sashing/ccache/` | workers: `/home/sashing/.ccache` | ccache, shared |
 
 - A worker's directory belongs to a subuid of the host user: reach it with
   `podman unshare`.
