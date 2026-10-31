@@ -53,8 +53,10 @@ def build(buildid):
     return get(f'builds/{buildid}', property=['msgid', 'series_msgid', 'projectname'])['builds'][0]
 
 
-# A Trigger step links each build it started: how a build is placed under its step.
+# A Trigger step links each build request it made, then, once all its builds are done and
+# not always, each build: how a build is placed under its step, by either.
 BUILD_URL = re.compile(r'#/builders/(\d+)/builds/(\d+)$')
+REQUEST_URL = re.compile(r'#/buildrequests/(\d+)$')
 
 
 def tree(build):
@@ -68,13 +70,24 @@ def tree(build):
     if ids:
         triggered = get('builds', buildid__in=ids, property=['msgid', 'series_msgid'])['builds']
     by_number = {(b['builderid'], b['number']): b for b in triggered}
+    # A request retried has a build per try.
+    by_request = collections.defaultdict(list)
+    for b in sorted(triggered, key=lambda b: b['buildid']):
+        by_request[b['buildrequestid']].append(b)
     for step in build['steps']:
         step['builds'] = []
+        placed = set()
         for url in step['urls']:
-            m = BUILD_URL.search(url['url'])
-            child = m and by_number.get((int(m[1]), int(m[2])))
-            if child:
-                step['builds'].append(tree(child))
+            if m := BUILD_URL.search(url['url']):
+                children = [by_number[k]] if (k := (int(m[1]), int(m[2]))) in by_number else []
+            elif m := REQUEST_URL.search(url['url']):
+                children = by_request[int(m[1])]
+            else:
+                children = []
+            for child in children:
+                if child['buildid'] not in placed:
+                    placed.add(child['buildid'])
+                    step['builds'].append(tree(child))
     return build
 
 
