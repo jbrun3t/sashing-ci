@@ -3,3 +3,5 @@
 --fail-fast
 # A randomized struct layout gets a new seed in every build directory, missing ccache.
 --kconfig-add=CONFIG_RANDSTRUCT_NONE=y
+# NFSv4 is outside the scope of the checks and only adds warnings to the build log.
+--kconfig-add=CONFIG_NFS_V4=n
