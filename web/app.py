@@ -4,6 +4,7 @@ reaches. The pages update through htmx: the templates name the fragments to fetc
 when."""
 
 import collections
+import configparser
 import json
 import os
 import re
@@ -19,6 +20,10 @@ PAGE = 50
 DAY = 86400
 
 app = Flask(__name__)
+ini = configparser.ConfigParser(interpolation=None)
+ini.read('/etc/sashing-ci/project.ini')
+app.jinja_env.globals.update(project_links=ini['project'] if 'project' in ini else {},
+                             revision=os.environ.get('SASHING_REVISION'))
 # The styles, scripts and fonts: kept by browsers, unchecked, for 5 minutes. A change
 # reaches readers within that time.
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 300

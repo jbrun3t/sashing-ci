@@ -14,8 +14,25 @@
 </head>
 <body hx-ext="morph">
 <main>
+<header class="page-head">
 <p class="eyebrow"><a href="{{ url_for('index') }}">sashing-ci</a>{% block eyebrow %}{% endblock %}</p>
+<nav class="project-links" aria-label="Project links">
+{% if project_links.tree_url %}
+  <a href="{{ project_links.tree_url }}" aria-label="Git tree" title="Git tree">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2" transform="rotate(45 12 12)" fill="#f05032"/><path d="m7 5 9 9m-5-5v9" stroke="white" stroke-width="1.8"/><g fill="white"><circle cx="11" cy="9" r="1.8"/><circle cx="16" cy="14" r="1.8"/><circle cx="11" cy="18" r="1.8"/></g></svg>
+  </a>
+{% endif %}
+{% if project_links.patchwork_url %}
+  <a href="{{ project_links.patchwork_url }}" aria-label="Patchwork patch list" title="Patchwork patch list">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285a3" d="M2 2h9v9H2zm11 11h9v9h-9z"/><path fill="#dfa54e" d="M13 2h9l-9 9zM2 13h9l-9 9z"/><path fill="#61986b" d="M22 2v9h-9zM11 13v9H2z"/></svg>
+  </a>
+{% endif %}
+</nav>
+</header>
 {% block main %}{% endblock %}
+{% if revision %}
+<footer><a href="https://github.com/jbrun3t/sashing-ci/commit/{{ revision }}">sashing-ci version {{ revision[:12] }}</a></footer>
+{% endif %}
 </main>
 </body>
 </html>

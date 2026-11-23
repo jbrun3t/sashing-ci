@@ -9,3 +9,9 @@ Pod=sashing.pod
 Image=localhost/sashing-web:latest
 # The app, relative to this file: the checkout's. A directory: a restart takes an update.
 Volume=../web:/opt/sashing-web:ro
+Volume=%E/sashing-ci:/etc/sashing-ci:ro
+EnvironmentFile=%t/sashing-web/revision.env
+
+[Service]
+RuntimeDirectory=sashing-web
+ExecStartPre=/bin/sh -ec 'rev=$(git -C "%E/containers/systemd/sashing" rev-parse HEAD); echo "SASHING_REVISION=$rev" > "%t/sashing-web/revision.env"'
