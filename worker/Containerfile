@@ -1,8 +1,4 @@
-# A Buildbot worker with the kernel toolchains and the tasks, run as a `sashing` user.
-# Build from the repository's root:
-#
-#   podman build -f worker/Containerfile -t localhost/sashing-worker .
-#
+# A Buildbot worker with kernel toolchains. Mount tasks/ at /opt/sashing/tasks.
 # tuxmake's clang-21 image is Debian trixie with clang 21 and the native gcc, plus
 # tuxmake and ccache: it builds every preset in tasks/tuxmake/. b4 checks signed
 # messages with gpg. checkpatch's license check needs ply and GitPython, its spelling
@@ -36,7 +32,6 @@ RUN useradd -m sashing
 COPY --from=buildbot /buildbot/buildbot.tac /opt/sashing/buildbot.tac
 COPY worker/ccache.conf /etc/ccache.conf
 COPY worker/gitconfig /etc/gitconfig
-COPY tasks/ /opt/sashing/tasks/
 
 # The venv last: python3 stays the system's, with the kernel scripts' modules.
 ENV PATH=/opt/sashing/tasks:$PATH:/opt/venv/bin

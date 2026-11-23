@@ -3,14 +3,12 @@
 Kernel patch CI on [Buildbot](https://buildbot.net): given a message-id, apply the series
 from lore, check each of its patches, then build the series.
 
-- `master/`: the master, mounted from the checkout on its image,
-  `localhost/sashing-master`, which holds only Buildbot:
+- `master/`: the pipeline, mounted into the Buildbot master:
   - `master.cfg`: the flow, and what patchwork gets
   - `reporterjson.py`: a reporter writing JSON to a Unix socket
-- `tasks/`: the work, scripts that know nothing of Buildbot
-- `worker/`: the worker image, `localhost/sashing-worker`: toolchains, b4 and the tasks
-- `web/`: the read-only web UI, Flask, mounted from the checkout on its image,
-  `localhost/sashing-web`
+- `tasks/`: checks and build presets, mounted into each worker
+- `worker/`: Buildbot worker, kernel toolchains and b4
+- `web/`: the read-only Flask UI, shipped in the web image
 - `quadlet/`: the rootless Quadlet units
 - `samples/`: projects, such as `linux-clk.ini`: the master reads its own from
   `~/.config/sashing-ci/project.ini`
@@ -38,7 +36,8 @@ series MSGID                 gather the patches at MSGID's revision
 ## Patchwork
 
 [pw-triage-bot](https://github.com/jbrun3t/pw-triage-bot) starts the runs of
-the series it triages through its hook, `trigger-ci.sh`, as the project's
+the series it triages through its hook, `trigger-ci.sh`. Mount the hook on the
+bot's `PATH` and set its `SASHING_OWNER` environment variable to the project's
 `[patchwork] owner`. Each test of those runs is reported as it ends, through pw-check's
 socket, `[patchwork] socket`, in the `pw-check` volume the master mounts:
 
@@ -69,12 +68,41 @@ Otherwise the step keeps its normal summary. The companion does not set the test
 
 Presets are tuxmake configuration files in `tasks/tuxmake/`; `default` applies to all.
 
-## Setup
+## Images
+
+The **Publish images** GitHub Actions workflow builds three Linux/amd64 images:
+`ghcr.io/jbrun3t/sashing-master`, `ghcr.io/jbrun3t/sashing-worker` and
+`ghcr.io/jbrun3t/sashing-web`. All three are tagged with the full commit SHA
+of the workflow run. Pushes to `main` that change image inputs or the workflow
+publish a set; use **Run workflow** to build on demand. Edits to the mounted
+pipeline, tasks and project INI need no image build.
+
+For anonymous pulls, set each GHCR package's visibility to public after its
+first publication. In a deployment, use the tagged image reference directly.
+For the sample Quadlets, give the images their local names:
+
+```sh
+revision=...  # full commit SHA from the image build
+for component in master worker web; do
+    image="ghcr.io/jbrun3t/sashing-$component:$revision"
+    podman pull "$image" && podman tag "$image" "localhost/sashing-$component"
+done
+```
+
+Alternatively, build locally from the repository root:
 
 ```sh
 podman build -f master/Containerfile -t localhost/sashing-master .
 podman build -f worker/Containerfile -t localhost/sashing-worker .
 podman build -f web/Containerfile -t localhost/sashing-web .
+```
+
+## Setup
+
+From the checkout containing the pipeline you want to run:
+
+```sh
+mkdir -p ~/.config/containers/systemd
 ln -s "$PWD" ~/.config/containers/systemd/sashing
 mkdir -p ~/.config/sashing-ci && cp samples/linux-clk.ini ~/.config/sashing-ci/project.ini
 head -c 24 /dev/urandom | base64 | podman secret create sashing-worker-pass -
@@ -88,12 +116,14 @@ systemctl --user start sashing-pod sashing-master sashing-worker@local1 sashing-
 
 To take a change:
 
-- a task: rebuild the worker image, restart the workers
+- a task or tuxmake preset: workers read `tasks/` from the mounted directory.
+  Edit between builds if every step of a run must use the same revision.
 - `master.cfg` or the project: reload the master, which the running builds survive:
   `systemctl --user reload sashing-master`
 - `reporterjson.py` or `buildbot.tac`: restart the master
 - `master/Containerfile`, Buildbot: rebuild the master image, restart the master
-- `web/`: restart sashing-web; `web/Containerfile`: rebuild its image first
+- `web/`: rebuild the web image and restart sashing-web. Build with
+  `--build-arg REVISION="$(git rev-parse HEAD)"` to link the UI footer to its source.
 - A master restart ends the running builds.
 
 The image keeps the dtschema it was built with. Once the tree requires a newer one, the
@@ -109,15 +139,15 @@ systemctl --user restart sashing-worker@local1 sashing-worker@local2
 |---|---|---|
 | `~/.local/state/sashing/` | master: `/buildbot` | database |
 | the checkout's `master/` | master: `/opt/sashing` | the flow |
-| `~/.config/sashing-ci/` | master: `/etc/sashing-ci` | the project, `project.ini` |
-| the checkout's `web/` | sashing-web: `/opt/sashing-web` | the web UI |
+| `~/.config/sashing-ci/` | master and web: `/etc/sashing-ci` | the project, `project.ini` |
+| the checkout's `tasks/` | worker: `/opt/sashing/tasks` | executable checks and tuxmake presets |
 | volume `pw-check` | master: `/run/pw-check` | pw-check's socket |
 | `~/.cache/sashing/<worker>/` | worker: `/home/sashing` | builders' trees, b4's cache |
 | `~/.cache/sashing/ccache/` | workers: `/home/sashing/.ccache` | ccache, shared |
 
 - A worker's directory belongs to a subuid of the host user: reach it with
   `podman unshare`.
-- A worker on another machine: the same image, `BUILDMASTER` set to the master's host,
+- A worker on another machine: the same image and tasks mount, `BUILDMASTER` set to the master's host,
   which then publishes port 9989.
 
 ## Use

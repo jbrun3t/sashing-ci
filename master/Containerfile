@@ -1,8 +1,4 @@
-# The Buildbot master, Buildbot only: the flow, the checkout's master/, is mounted on
-# /opt/sashing, which a reload reads again; the project, project.ini, in /etc/sashing-ci;
-# the state, the database, in the working directory. Build from the repository's root:
-#
-#   podman build -f master/Containerfile -t localhost/sashing-master .
+# Buildbot runtime. Mount the pipeline at /opt/sashing and persist /buildbot.
 
 FROM docker.io/library/debian:trixie-slim
 ARG BUILDBOT_VERSION=4.3.0

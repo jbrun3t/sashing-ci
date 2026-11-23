@@ -7,10 +7,10 @@ After=sashing-master.service
 [Container]
 ContainerName=sashing-worker-%i
 Pod=sashing.pod
-# The pod would start the bare template, as an instance named after the pod: started by
-# instance only. Quadlet stops linking pods to templates in podman 6.
+# Start only the worker instances named in project.ini.
 StartWithPod=false
 Image=localhost/sashing-worker:latest
+Volume=../tasks:/opt/sashing/tasks:ro
 Environment=WORKERNAME=%i BUILDMASTER=localhost
 Secret=sashing-worker-pass,type=env,target=WORKERPASS
 # The worker's home: the builders' trees and b4's cache. U: owned by the image's

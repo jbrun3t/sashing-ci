@@ -1,0 +1,43 @@
+name: Publish images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - master/Containerfile
+      - worker/**
+      - web/**
+      - .github/workflows/images.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        component: [master, worker, web]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build image
+        env:
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/sashing-$COMPONENT:$GITHUB_SHA"
+          args=()
+          if [[ $COMPONENT == web ]]; then args+=(--build-arg "REVISION=$GITHUB_SHA"); fi
+          docker build -f "$COMPONENT/Containerfile" -t "$image" "${args[@]}" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" .
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+      - name: Publish to GHCR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE"
