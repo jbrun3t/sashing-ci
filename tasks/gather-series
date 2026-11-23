@@ -1,0 +1,54 @@
+#!/bin/bash -e
+# Usage: gather-series MBOX MSGID
+#
+# Write the prerequisites and patches of MSGID's revision to MBOX. Print only the
+# series' own message-ids, one per line, in application order.
+
+mbox=${1:?usage: gather-series MBOX MSGID}
+msgid=${2:?usage: gather-series MBOX MSGID}
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+set -o pipefail
+
+prefix=$(b4 mbox --single-message -o - "$msgid" | sed -n '1,/^$/ s/^Subject: *\[\([^]]*\)\].*/\1/p')
+version=1
+if [[ $prefix =~ (^|[[:space:]])v([0-9]+)($|[[:space:]]) ]]; then
+	version=${BASH_REMATCH[2]}
+fi
+b4 am -i -v "$version" -o "$tmp" -n series "$msgid" 2>&1 | tee "$tmp/log" >&2
+[ -s "$tmp/series.mbx" ] && ! grep -q '^WARNING: Thread incomplete!' "$tmp/log" || exit 1
+
+mkdir "$tmp/patches"
+git mailsplit -o"$tmp/patches" "$tmp/series.mbx" >/dev/null
+
+# b4 am leaves prerequisites out of its mailbox. Match each declared patch-id
+# against the decoded diff: lore can return several postings of the same patch.
+prerequisite() {
+	local id=$1 status mail actual
+	status=$(curl -sSL -d x=m -w '%{http_code}' -o "$tmp/result.gz" \
+		"https://lore.kernel.org/all/?x=m&q=patchid:$id")
+	[ "$status" != 404 ] || return 0
+	[ "$status" = 200 ] || { echo "Prerequisite $id: HTTP $status" >&2; return 2; }
+	mkdir -p "$tmp/matches"
+	gzip -dc "$tmp/result.gz" | git mailsplit -o"$tmp/matches" >/dev/null
+	for mail in "$tmp"/matches/*; do
+		git mailinfo /dev/null "$tmp/diff" <"$mail" >/dev/null
+		actual=$(git patch-id --stable <"$tmp/diff" | cut -d' ' -f1)
+		if [ "$actual" = "$id" ]; then
+			sed '1s/^From [^ ]*/From prerequisite/' "$mail"
+			break
+		fi
+	done
+	rm -r "$tmp/matches"
+}
+
+metadata=("$tmp/patches/0001")
+[ ! -f "$tmp/series.cover" ] || metadata=("$tmp/series.cover" "${metadata[@]}")
+sed -nE 's/^prerequisite-patch-id:[[:space:]]+([[:xdigit:]]{40})[[:space:]]*$/\1/ip' "${metadata[@]}" |
+	awk '!seen[$0]++' | while read -r id; do prerequisite "$id"; done >"$mbox"
+cat "$tmp/series.mbx" >>"$mbox"
+for mail in "$tmp"/patches/*; do
+	git mailinfo -m "$tmp/message" /dev/null <"$mail" >/dev/null
+	id=$(sed -n '$s/^Message-ID: <\(.*\)>$/\1/ip' "$tmp/message")
+	echo "${id:?missing Message-ID in $mail}"
+done

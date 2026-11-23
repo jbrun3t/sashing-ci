@@ -23,7 +23,7 @@ ARG B4_VERSION
 ARG YAMLLINT_VERSION
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-venv gpg python3-ply python3-git python3-ruamel.yaml codespell \
+        python3-venv gpg python3-ply python3-git python3-ruamel.yaml codespell curl \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir "b4==$B4_VERSION" "buildbot-worker==$BUILDBOT_VERSION" \

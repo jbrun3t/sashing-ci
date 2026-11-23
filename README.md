@@ -18,8 +18,8 @@ from lore, check each of its patches, then build the series.
 ## Flow
 
 ```
-series MSGID                 apply the series on git_base, at MSGID's revision
-├─ patch COMMIT              one build per patch: checkpatch, dt-binding-check for each
+series MSGID                 gather the patches at MSGID's revision
+├─ patch MSGID               apply through this patch, then checkpatch, dt-binding-check for each
 │                            binding schema it adds or changes, then each preset,
 │                            patch_config on patch_target
 └─ build                     the whole series, if every patch built: each config of
@@ -28,8 +28,9 @@ series MSGID                 apply the series on git_base, at MSGID's revision
 
 - The series applies on `git_base` as fetched when its build starts; its patch builds
   check out that same commit.
-- A patch that fails to build stops the series. checkpatch's and the binding checks'
-  findings only warn.
+- If a patch fails to apply, earlier patches still run their checks. Later patches
+  report which patch blocked them. A patch that fails to apply or build stops the
+  series builds. checkpatch's and the binding checks' findings only warn.
 - A patch build has its message-id as property `msgid`, its series' as `series_msgid`.
 - A worker runs one build of each builder at a time. More builds at once: add a worker to
   `workers` and start its unit.
@@ -55,7 +56,8 @@ anything else when it could not check.
 
 | Task | Does |
 |---|---|
-| `apply-series COMMITS MSGID` | applies a series from lore with b4, at MSGID's revision |
+| `gather-series MBOX MSGID` | saves the revision's prerequisites and patches from lore in one mailbox; prints the patches' message-ids in order |
+| `apply-patch MBOX [NUMBER]` | applies the prerequisites and patches through NUMBER (default: the whole series); warns if prerequisites were needed |
 | `checkpatch` | runs checkpatch on HEAD |
 | `dt-binding-check FILE` | checks a binding schema for the findings HEAD adds |
 | `kbuild PRESET CONFIG [TARGET...]` | builds with tuxmake |
