@@ -2,16 +2,29 @@
 # Usage: checkpatch
 #
 # Run checkpatch on the HEAD commit of the tree in the current directory, with codespell's
-# dictionary for spelling. Exits 0 when clean, 3 on warnings only, 1 on errors or when
-# checkpatch printed no summary.
-
-log=$(mktemp)
-trap 'rm -f "$log"' EXIT
+# dictionary for spelling. Notices alone pass; warnings exit 3, errors or a missing
+# summary exit 1.
 
 # checkpatch exits 1 on errors and warnings alike: its summary tells them apart.
-./scripts/checkpatch.pl --codespell -g HEAD 2>&1 | tee "$log"
-
-total=$(grep -m1 '^total: ' "$log" || true)
-[[ $total =~ ^total:\ ([0-9]+)\ errors,\ ([0-9]+)\ warnings ]] || exit 1
-[ "${BASH_REMATCH[1]}" = 0 ] || exit 1
-[ "${BASH_REMATCH[2]}" = 0 ] || exit 3
+./scripts/checkpatch.pl --codespell --show-types -g HEAD 2>&1 | awk '
+function count(n, label) { return n " " label (n == 1 ? "" : "s") }
+/^WARNING:(FILE_PATH_CHANGES|CONFIG_DESCRIPTION): / {
+	sub(/^WARNING:/, "NOTICE:")
+	message = substr($0, index($0, ": ") + 2)
+	notices++
+}
+/^total: [0-9]+ errors, [0-9]+ warnings,/ {
+	summary = 1
+	errors = $2
+	warnings = $4 - notices
+	if (notices) {
+		text = errors ? count(errors, "error") ", " : ""
+		if (warnings) text = text count(warnings, "warning") ", "
+		text = text count(notices, "notice")
+		if (!errors && !warnings && notices == 1) text = text ": " message
+		$0 = "total: " text
+	}
+}
+{ print }
+END { exit (!summary || errors || warnings < 0) ? 1 : (warnings ? 3 : 0) }
+'

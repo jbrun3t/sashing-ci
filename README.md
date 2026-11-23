@@ -62,7 +62,7 @@ Otherwise the step keeps its normal summary. The companion does not set the test
 |---|---|
 | `gather-series MBOX MSGID` | saves the revision's prerequisites and patches from lore in one mailbox; prints the patches' message-ids in order |
 | `apply-patch MBOX [NUMBER]` | applies the prerequisites and patches through NUMBER (default: the whole series); warns if prerequisites were needed |
-| `checkpatch` | runs checkpatch on HEAD |
+| `checkpatch` | checks HEAD; `FILE_PATH_CHANGES` and `CONFIG_DESCRIPTION` are notices and do not by themselves warn or fail |
 | `dt-binding-check FILE` | checks a binding schema for the findings HEAD adds |
 | `kbuild PRESET CONFIG [TARGET...]` | builds with tuxmake |
 
