@@ -1,0 +1,15 @@
+#!/bin/sh
+# Usage: kbuild EXIT_CODE < log
+#
+# Prefer the first compiler error over make's cascading failures.
+
+rc=${1:?usage: kbuild EXIT_CODE}
+if [ "$rc" = 0 ]; then
+	echo 'build OK'
+	exit 0
+fi
+awk -v rc="$rc" '
+	/(^|: )(fatal )?error: / { failure = $0; exit }
+	!failure && /(\*\*\* |undefined reference to )/ { failure = $0 }
+	END { print "build failed: " (failure ? failure : "exit code " rc) }
+'

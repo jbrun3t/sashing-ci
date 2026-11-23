@@ -54,6 +54,11 @@ socket, `[patchwork] socket`, in the `pw-check` volume the master mounts:
 A task runs in the kernel tree, logs to its output, and exits 0 pass, 1 fail, 3 warning,
 anything else when it could not check.
 
+Compile steps look for an executable `master/summaries/TASK`. It receives the task's
+exit code as its only argument and the finished stdout and stderr on stdin. Exit zero
+and print one nonempty line to use it as the step description in the UI and Patchwork.
+Otherwise the step keeps its normal summary. The companion does not set the test result.
+
 | Task | Does |
 |---|---|
 | `gather-series MBOX MSGID` | saves the revision's prerequisites and patches from lore in one mailbox; prints the patches' message-ids in order |
