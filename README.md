@@ -60,8 +60,8 @@ Otherwise the step keeps its normal summary. The companion does not set the test
 
 | Task | Does |
 |---|---|
-| `gather-series MBOX MSGID` | saves the revision's prerequisites and patches from lore in one mailbox; prints the patches' message-ids in order |
-| `apply-patch MBOX [NUMBER]` | applies the prerequisites and patches through NUMBER (default: the whole series); warns if prerequisites were needed |
+| `gather-series DIRECTORY MSGID` | writes `series.mbx` and `series-prerequisites.mbx` for MSGID's revision; fails on an unresolved prerequisite; prints the series' patch message-ids in order |
+| `apply-patch DIRECTORY [NUMBER]` | applies the gathered prerequisites and patches through NUMBER offline (default: the whole series); warns if prerequisites were applied |
 | `checkpatch` | checks HEAD; `FILE_PATH_CHANGES` and `CONFIG_DESCRIPTION` are notices and do not by themselves warn or fail |
 | `dt-binding-check FILE` | checks a binding schema for the findings HEAD adds |
 | `kbuild PRESET CONFIG [TARGET...]` | builds with tuxmake |

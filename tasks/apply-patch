@@ -1,41 +1,38 @@
 #!/bin/bash -e
-# Usage: apply-patch MBOX [NUMBER]
+# Usage: apply-patch DIRECTORY [NUMBER]
 #
 # Apply a gathered mailbox through patch NUMBER, or to the end, in the current
 # checkout. Exit 1 on a conflict, 3 on success with prerequisites.
 
-mbox=${1:?usage: apply-patch MBOX [NUMBER]}
+dir=${1:?usage: apply-patch DIRECTORY [NUMBER]}
 target=$2
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 export GIT_COMMITTER_NAME=sashing-ci GIT_COMMITTER_EMAIL=sashing-ci@localhost
 
-git mailsplit -o"$tmp" "$mbox" >/dev/null
-n=0
-deps=0
-for mail in "$tmp"/*; do
-	read -r envelope <"$mail"
-	if [[ $envelope == 'From prerequisite '* ]]; then
-		deps=$((deps + 1))
-		label="prerequisite $deps"
-		format=mboxrd
-	else
-		n=$((n + 1))
-		label="patch $n"
-		format=mbox
+test -f "$dir/series-prerequisites.mbx" || exit 2
+if [ -s "$dir/series-prerequisites.mbx" ]; then
+	if ! git am "$dir/series-prerequisites.mbx"; then
+		echo "${target:+Patch $target: }blocked by prerequisite"
+		exit 1
 	fi
-	if ! git am --patch-format="$format" "$mail"; then
+fi
+git mailsplit -o"$tmp" "$dir/series.mbx" >/dev/null
+n=0
+for mail in "$tmp"/*; do
+	n=$((n + 1))
+	if ! git am "$mail"; then
 		if [ "$target" = "$n" ]; then
 			echo "Patch $n: failed to apply"
 		else
-			echo "${target:+Patch $target: }blocked by $label"
+			echo "${target:+Patch $target: }blocked by patch $n"
 		fi
 		exit 1
 	fi
 	[ "$target" != "$n" ] || break
 done
 [ -z "$target" ] || [ "$target" = "$n" ] || { echo "Missing patch $target" >&2; exit 2; }
-if [ "$deps" -gt 0 ]; then
+if [ -s "$dir/series-prerequisites.mbx" ]; then
 	echo "Patch $n: applied with prerequisites"
 	exit 3
 fi
