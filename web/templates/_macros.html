@@ -7,7 +7,11 @@
 
 {% macro step_row(b, s) %}
   {{ badge(s.results, s.state_string) }}
+  {% if not s.builds or s.has_log %}
   <a class="name" href="{{ url_for('log', buildid=b.buildid, number=s.number) }}">{{ s.name }}</a>
+  {% else %}
+  <span class="name">{{ s.name }}</span>
+  {% endif %}
   <span class="summary">{{ s.state_string }}</span>
   <span class="duration">{{ s | duration }}</span>
 {% endmacro %}

@@ -69,8 +69,7 @@ REQUEST_URL = re.compile(r'#/buildrequests/(\d+)$')
 
 
 def tree(build):
-    """build, with its steps, and under each step the builds it triggered. A step's logs
-    are left to its page: asking each step for them would take most of the requests."""
+    """Build with its steps and the builds each step triggered."""
     buildid = build['buildid']
     build['steps'] = [s for s in get(f'builds/{buildid}/steps')['steps'] if not s['hidden']]
     ids = [b['buildid'] for b in get(f'builds/{buildid}/triggered_builds')['builds']]
@@ -97,6 +96,8 @@ def tree(build):
                 if child['buildid'] not in placed:
                     placed.add(child['buildid'])
                     step['builds'].append(tree(child))
+        if step['builds']:
+            step['has_log'] = bool(step_logs(buildid, step['number'], None)[1])
     return build
 
 
