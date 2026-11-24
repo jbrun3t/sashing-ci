@@ -1,7 +1,8 @@
 #!/opt/venv/bin/python
-"""Gather one revision and its prerequisites. Stdout names only patches under test."""
+"""Gather one revision. Stdout lists patch IDs; exit 3 means prerequisites were gathered."""
 
 import argparse
+import sys
 from pathlib import Path
 
 import b4
@@ -19,7 +20,7 @@ def prerequisites(series):
             matches[patch.git_patch_id] = patch
     for pid in ids:
         if pid not in matches:
-            raise SystemExit(f'Missing prerequisite: {pid}')
+            raise SystemExit(f'Missing prerequisite (patch-id): {pid}')
     return [matches[pid].get_am_message(add_trailers=False) for pid in ids]
 
 
@@ -32,10 +33,15 @@ def main():
     msgid = args.msgid.strip('<>')
     thread = b4.get_series_by_msgid(msgid)
     if not thread or msgid not in thread.msgid_map:
-        raise SystemExit(f'Message not found: {msgid}')
+        raise SystemExit(f'Message not found (Message-ID): {msgid}')
     series = thread.get_series(revision=thread.msgid_map[msgid].revision)
-    if not series or not series.complete:
-        raise SystemExit(f'Incomplete series: {msgid}')
+    if not series:
+        raise SystemExit(f'Series not found (Message-ID): {msgid}')
+    if not series.complete:
+        missing = [f'{number}/{series.expected}'
+                   for number, patch in enumerate(series.patches[1:], 1) if patch is None]
+        label = 'patch' if len(missing) == 1 else 'patches'
+        raise SystemExit(f'Incomplete series: missing {label} {", ".join(missing)}')
     deps = prerequisites(series)
     patches = series.get_am_ready(addlink=True)
     args.directory.mkdir(parents=True, exist_ok=True)
@@ -44,7 +50,12 @@ def main():
             b4.save_git_am_mbox(messages, out)
     for patch in series.patches[1:]:
         print(patch.msgid)
+    if deps:
+        label = 'prerequisite' if len(deps) == 1 else 'prerequisites'
+        print(f'Gathered with {len(deps)} {label}', file=sys.stderr)
+        return 3
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

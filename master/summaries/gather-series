@@ -1,0 +1,5 @@
+#!/bin/sh
+awk '
+/^(Missing prerequisite \(patch-id\)|Message not found \(Message-ID\)|Series not found \(Message-ID\)|Incomplete series): / ||
+/^Gathered with [0-9]+ prerequisites?$/ { print; exit }
+'

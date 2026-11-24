@@ -1,0 +1,2 @@
+#!/bin/sh
+awk '/^total: / { summary = $0 } END { if (summary) print summary }'

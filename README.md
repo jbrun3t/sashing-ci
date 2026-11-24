@@ -53,14 +53,15 @@ socket, `[patchwork] socket`, in the `pw-check` volume the master mounts:
 A task runs in the kernel tree, logs to its output, and exits 0 pass, 1 fail, 3 warning,
 anything else when it could not check.
 
-Compile steps look for an executable `master/summaries/TASK`. It receives the task's
-exit code as its only argument and the finished stdout and stderr on stdin. Exit zero
+The `gather-series`, `apply-patch`, `checkpatch`, and compile steps look for an executable
+`master/summaries/TASK`. It receives the task's exit code as its only argument
+and the finished stdout and stderr on stdin. Exit zero
 and print one nonempty line to use it as the step description in the UI and Patchwork.
 Otherwise the step keeps its normal summary. The companion does not set the test result.
 
 | Task | Does |
 |---|---|
-| `gather-series DIRECTORY MSGID` | writes `series.mbx` and `series-prerequisites.mbx` for MSGID's revision; fails on an unresolved prerequisite; prints the series' patch message-ids in order |
+| `gather-series DIRECTORY MSGID` | writes `series.mbx` and `series-prerequisites.mbx` for MSGID's revision; prints patch message-ids in order; exits 3 when prerequisites were gathered and fails if one is unresolved |
 | `apply-patch DIRECTORY [NUMBER]` | applies the gathered prerequisites and patches through NUMBER offline (default: the whole series); warns if prerequisites were applied |
 | `checkpatch` | checks HEAD; `FILE_PATH_CHANGES` and `CONFIG_DESCRIPTION` are notices and do not by themselves warn or fail |
 | `dt-binding-check FILE` | checks a binding schema for the findings HEAD adds |

@@ -1,0 +1,2 @@
+#!/bin/sh
+awk '/^Patch [0-9]+: / { summary = $0 } END { if (summary) print summary }'
